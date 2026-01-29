@@ -101,6 +101,6 @@ Status
 Projektet är under aktiv utveckling.
 README och funktionalitet uppdateras löpande.
 
-👥 Team
+# Team
 Patrik
 Jesper

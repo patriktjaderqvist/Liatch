@@ -1,10 +1,107 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function CreateAccountPage() {
+    const [accountType, setAccountType] = useState('Student');
+
+    const getPlaceholderText = () => {
+        switch (accountType) {
+            case 'Student':
+                return 'Ditt namn';
+            case 'Företag':
+                return 'Företagets namn';
+            case 'Skola':
+                return 'Skolans namn';
+            default:
+                return 'Ditt namn';
+        }
+    };
+
     return (
-        <div className="pt-32 px-6 max-w-7xl mx-auto">
-            <h1 className="text-4xl font-display font-bold text-text-main mb-6">Skapa konto</h1>
-            <p className="text-text-muted">Registreringsformulär kommer här.</p>
+        <div className="relative max-w-md px-4 pt-24 mx-auto rounded-lg shadow-md bg-bg-main text-text-main">
+            <div className="p-6 border rounded-lg shadow-lg bg-bg-secondary border-fg/5">
+                <h1 className="mb-4 text-2xl font-bold text-center">Skapa Konto</h1>
+
+                {/* Tabs for Account Types */}
+                <div className="flex justify-center mb-6 space-x-4">
+                    {['Student', 'Företag', 'Skola'].map((type) => (
+                        <button
+                            key={type}
+                            onClick={() => setAccountType(type)}
+                            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                                accountType === type
+                                    ? 'bg-accent text-white'
+                                    : 'bg-bg-hover text-text-muted hover:bg-bg-hover/80'
+                            }`}
+                        >
+                            {type}
+                        </button>
+                    ))}
+                </div>
+
+                <form className="p-4 space-y-4 rounded-lg bg-bg-secondary">
+                    {/* Name/Organization Input */}
+                    <div>
+                        <label className="block mb-1 text-sm font-medium">{accountType === 'Student' ? 'Namn' : 'Namn på ' + accountType.toLowerCase()}</label>
+                        <input
+                            type="text"
+                            placeholder={getPlaceholderText()}
+                            className="w-full px-3 py-2 border rounded-lg bg-bg-input border-border text-text-main focus:outline-none focus:ring-2 focus:ring-accent"
+                        />
+                    </div>
+
+                    {/* Personal Number for Students */}
+                    {accountType === 'Student' && (
+                        <div>
+                            <label className="block mb-1 text-sm font-medium">Personnummer</label>
+                            <input
+                                type="text"
+                                placeholder="ÅÅÅÅMMDD-XXXX"
+                                className="w-full px-3 py-2 border rounded-lg bg-bg-input border-border text-text-main focus:outline-none focus:ring-2 focus:ring-accent"
+                            />
+                        </div>
+                    )}
+
+                    {/* Email/School Email/Company Email */}
+                    <div>
+                        <label className="block mb-1 text-sm font-medium">{accountType === 'Student' ? 'E-post' : accountType === 'Företag' ? 'Företagsmail' : 'Mailadress till skolan'}</label>
+                        <input
+                            type="email"
+                            placeholder={accountType === 'Student' ? 'Din e-postadress' : accountType === 'Företag' ? 'Företagsmail' : 'Skolans e-postadress'}
+                            className="w-full px-3 py-2 border rounded-lg bg-bg-input border-border text-text-main focus:outline-none focus:ring-2 focus:ring-accent"
+                        />
+                    </div>
+
+                    {/* Organization Number */}
+                    {accountType !== 'Student' && (
+                        <div>
+                            <label className="block mb-1 text-sm font-medium">Organisationsnummer</label>
+                            <input
+                                type="text"
+                                placeholder="Organisationsnummer"
+                                className="w-full px-3 py-2 border rounded-lg bg-bg-input border-border text-text-main focus:outline-none focus:ring-2 focus:ring-accent"
+                            />
+                        </div>
+                    )}
+
+                    {/* Password Input */}
+                    <div>
+                        <label className="block mb-1 text-sm font-medium">Lösenord</label>
+                        <input
+                            type="password"
+                            placeholder="Välj ett lösenord"
+                            className="w-full px-3 py-2 border rounded-lg bg-bg-input border-border text-text-main focus:outline-none focus:ring-2 focus:ring-accent"
+                        />
+                    </div>
+
+                    {/* Submit Button */}
+                    <button
+                        type="submit"
+                        className="w-full py-2 text-sm font-bold text-center text-white rounded-lg bg-accent hover:bg-accent-hover focus:ring-2 focus:ring-offset-2 focus:ring-accent"
+                    >
+                        Skapa Konto
+                    </button>
+                </form>
+            </div>
         </div>
     );
 }

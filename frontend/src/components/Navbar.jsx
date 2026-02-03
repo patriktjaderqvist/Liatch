@@ -18,7 +18,7 @@ export default function Navbar() {
 
                     {/* Desktop Nav */}
                     <div className="hidden md:flex items-center gap-8">
-                        <Link to="/annonser" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">ANNONSER</Link>
+                        <Link to="/annonser" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">SÖK PRAKTIK</Link>
                         <Link to="/foretag" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">FÖR FÖRETAG</Link>
                         <Link to="/skolor" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">FÖR SKOLOR</Link>
                         <Link to="/om-oss" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">OM OSS</Link>

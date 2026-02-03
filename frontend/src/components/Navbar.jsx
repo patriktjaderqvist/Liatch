@@ -18,7 +18,7 @@ export default function Navbar() {
 
                     {/* Desktop Nav */}
                     <div className="hidden md:flex items-center gap-8">
-                        <Link to="/annonser" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">ANNONSER</Link>
+                        <Link to="/annonser" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">SÖK PRAKTIK</Link>
                         <Link to="/foretag" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">FÖR FÖRETAG</Link>
                         <Link to="/skolor" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">FÖR SKOLOR</Link>
                         <Link to="/om-oss" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">OM OSS</Link>
@@ -26,10 +26,10 @@ export default function Navbar() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-6">
-                        <a href="#" className="hidden md:block text-sm font-medium text-text-muted hover:text-text-main transition-colors">Logga in</a>
-                        <a href="/profil" className="bg-fg text-text-inverse hover:bg-accent hover:text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(255,77,0,0.4)]">
+                        <Link to="/login" className="hidden md:block text-sm font-medium text-text-muted hover:text-text-main transition-colors">Logga in</Link>
+                        <Link to="/skapa-konto" className="bg-fg text-text-inverse hover:bg-accent hover:text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(255,77,0,0.4)]">
                             Skapa konto
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </div>

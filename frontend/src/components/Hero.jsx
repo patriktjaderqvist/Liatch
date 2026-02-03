@@ -16,17 +16,17 @@ export default function Hero() {
 
 
 
-                <h1 className="mt-20 reveal-up delay-100 font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter mb-8 leading-[0.9] text-text-main headline-glow transition-colors duration-500">
+                <h1 className="mt-20 font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter mb-8 leading-[0.9] text-text-main headline-glow transition-colors duration-500">
                     Hitta din nästa <br />
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-text-main via-text-main to-text-muted">praktik</span>
                 </h1>
 
-                <p className="reveal-up delay-200 text-lg md:text-xl text-text-muted max-w-2xl mx-auto mb-12 font-light leading-relaxed">
+                <p className="text-lg md:text-xl text-text-muted max-w-2xl mx-auto mb-12 font-light leading-relaxed">
                     Koppla ihop din potential med branschens ledande företag. <span className="text-text-main font-medium">Liatch</span> är plattformen som förvandlar LIA & Praktik till karriär.
                 </p>
 
                 {/* Search Interface */}
-                <div className="reveal-up delay-300 max-w-3xl mx-auto glass p-2 rounded-2xl">
+                <div className="max-w-3xl mx-auto glass p-2 rounded-2xl">
                     <div className="flex flex-col md:flex-row gap-2">
                         <div className="flex-1 relative group">
                             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">

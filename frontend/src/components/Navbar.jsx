@@ -19,9 +19,10 @@ export default function Navbar() {
 
                     {/* Desktop Nav */}
                     <div className="hidden md:flex items-center gap-8">
-                        <a href="/annonser" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">ANNONSER</a>
-                        <a href="#" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">FÖR FÖRETAG</a>
-                        <a href="#" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">OM OSS</a>
+                        <a href="AdsPage.jsx" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">ANNONSER</a>
+                        <a href="CompaniesPage.jsx" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">FÖR FÖRETAG</a>
+                        <a href="AboutPage.jsx" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">OM OSS</a>
+                        <a href="SchoolsPage.jsx" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">FÖR SKOLOR</a>
                     </div>
 
                     {/* Actions */}

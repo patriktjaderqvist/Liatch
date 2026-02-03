@@ -41,10 +41,10 @@ export default function Footer() {
                     <div className="md:col-span-2 space-y-6">
                         <h4 className="text-text-main font-bold tracking-tight">Resurser</h4>
                         <ul className="space-y-3 text-sm">
-                            <li><a href="#" className="hover:text-accent transition-colors">Hjälpcenter</a></li>
-                            <li><a href="#" className="hover:text-accent transition-colors">Integritetspolicy</a></li>
-                            <li><a href="#" className="hover:text-accent transition-colors">Användarvillkor</a></li>
-                            <li><a href="#" className="hover:text-accent transition-colors">Cookies</a></li>
+                            <li><Link to="/hjalp" className="hover:text-accent transition-colors">Hjälpcenter</Link></li>
+                            <li><Link to="/integritet" className="hover:text-accent transition-colors">Integritetspolicy</Link></li>
+                            <li><Link to="/villkor" className="hover:text-accent transition-colors">Användarvillkor</Link></li>
+                            <li><Link to="/cookies" className="hover:text-accent transition-colors">Cookies</Link></li>
                         </ul>
                     </div>
 

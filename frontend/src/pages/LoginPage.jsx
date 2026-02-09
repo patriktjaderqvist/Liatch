@@ -1,7 +1,29 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function LoginPage() {
     const [accountType, setAccountType] = useState('Student');
+    const navigate = useNavigate();
+
+    const handleLogin = (e) => {
+        e.preventDefault();
+
+        // Map account type to role
+        const roleMap = {
+            'Student': 'privatperson',
+            'Företag': 'foretag',
+            'Skola': 'skola'
+        };
+
+        // Store the role in localStorage (temporary until real auth is implemented)
+        localStorage.setItem('userRole', roleMap[accountType]);
+
+        // Dispatch custom event to notify navbar of role change
+        window.dispatchEvent(new Event('userRoleChanged'));
+
+        // Redirect to home page
+        navigate('/');
+    };
 
     return (
         <div className="relative max-w-md px-4 pt-24 mx-auto rounded-lg shadow-md bg-bg-main text-text-main">
@@ -14,18 +36,17 @@ export default function LoginPage() {
                         <button
                             key={type}
                             onClick={() => setAccountType(type)}
-                            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                                accountType === type
-                                    ? 'bg-accent text-white'
-                                    : 'bg-bg-hover text-text-muted hover:bg-bg-hover/80'
-                            }`}
+                            className={`px-4 py-2 rounded-lg font-medium transition-all ${accountType === type
+                                ? 'bg-accent text-white'
+                                : 'bg-bg-hover text-text-muted hover:bg-bg-hover/80'
+                                }`}
                         >
                             {type}
                         </button>
                     ))}
                 </div>
 
-                <form className="p-4 space-y-4 rounded-lg bg-bg-secondary">
+                <form onSubmit={handleLogin} className="p-4 space-y-4 rounded-lg bg-bg-secondary">
                     {/* Email/School Email/Company Email */}
                     <div>
                         <label className="block mb-1 text-sm font-medium">{accountType === 'Student' ? 'E-post' : accountType === 'Företag' ? 'Företagsmail' : 'Mailadress till skolan'}</label>

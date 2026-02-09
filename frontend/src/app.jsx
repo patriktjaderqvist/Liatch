@@ -13,6 +13,14 @@ import HelpPage from './pages/HelpPage';
 import IntegrityPage from './pages/IntegrityPage';
 import TermsPage from './pages/TermsPage';
 import CookiesPage from './pages/CookiesPage';
+// Authenticated pages
+import MinaSokningarPage from './pages/MinaSokningarPage';
+import MinProfilPage from './pages/MinProfilPage';
+import VaraAnnonserPage from './pages/VaraAnnonserPage';
+import SkapaAnnonsPage from './pages/SkapaAnnonsPage';
+import ForetagsprofilPage from './pages/ForetagsprofilPage';
+import StudenterPage from './pages/StudenterPage';
+import SkolprofilPage from './pages/SkolprofilPage';
 
 function App() {
     return (
@@ -31,6 +39,14 @@ function App() {
                     <Route path="/integritet" element={<IntegrityPage />} />
                     <Route path="/villkor" element={<TermsPage />} />
                     <Route path="/cookies" element={<CookiesPage />} />
+                    {/* Authenticated routes */}
+                    <Route path="/mina-sokningar" element={<MinaSokningarPage />} />
+                    <Route path="/min-profil" element={<MinProfilPage />} />
+                    <Route path="/vara-annonser" element={<VaraAnnonserPage />} />
+                    <Route path="/skapa-annons" element={<SkapaAnnonsPage />} />
+                    <Route path="/foretagsprofil" element={<ForetagsprofilPage />} />
+                    <Route path="/studenter" element={<StudenterPage />} />
+                    <Route path="/skolprofil" element={<SkolprofilPage />} />
                 </Routes>
             </main>
             <Footer />

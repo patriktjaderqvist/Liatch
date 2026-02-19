@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { clearSession, logoutUser } from '../lib/authApi';
 
 export default function Navbar() {
     const [userRole, setUserRole] = useState(null);
@@ -26,8 +27,17 @@ export default function Navbar() {
         };
     }, []);
 
-    const handleLogout = () => {
-        localStorage.removeItem('userRole');
+    const handleLogout = async () => {
+        const accessToken = localStorage.getItem('accessToken');
+        if (accessToken) {
+            try {
+                await logoutUser(accessToken);
+            } catch {
+                // Local session should still be cleared if API logout fails.
+            }
+        }
+
+        clearSession();
         setUserRole(null);
         navigate('/');
     };

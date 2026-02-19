@@ -41,6 +41,8 @@ def register_user(user: UserRegisterSchema, db: Session = Depends(get_db)) -> Us
         last_name=user.last_name,
         hashed_password=hashed,
         user_type=user.user_type,  
+        student_id=user.student_id,
+        school_id=user.school_id,
         company_id=user.company_id,  
     )
 

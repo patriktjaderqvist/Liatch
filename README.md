@@ -93,10 +93,28 @@ cd backend
 pip install -r requirements.txt
 uvicorn main:app --reload
 
+# Database migrations (Alembic)
+cd backend
+
+# Create a new migration from model changes
+venv/bin/alembic revision --autogenerate -m "describe_change"
+
+# Apply latest migrations
+venv/bin/alembic upgrade head
+
+# Existing local DB that already has tables:
+# mark it as baseline without re-running initial create-table migration
+venv/bin/alembic stamp head
+
 # Frontend
 cd frontend
 npm install
 npm run dev
+
+# Optional: point frontend auth API to another backend URL
+# VITE_API_BASE_URL=http://localhost:8000 npm run dev
+```
+
 Status
 Projektet är under aktiv utveckling.
 README och funktionalitet uppdateras löpande.

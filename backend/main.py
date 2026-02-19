@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
 
+from app.api.v1.routers import router as v1_router
 from app.api.v1.core.models import Company
 from app.db_setup import get_db, init_db
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -15,6 +17,14 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+app.include_router(v1_router, prefix="/api/v1")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/company", status_code=200)
 def list_companies(db: Session = Depends(get_db)):

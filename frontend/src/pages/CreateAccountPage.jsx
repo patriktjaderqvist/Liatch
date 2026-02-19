@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { createRegisterPayload, fetchCurrentUser, loginUser, persistSession, registerUser } from '../lib/authApi';
 
 export default function CreateAccountPage() {
     const [accountType, setAccountType] = useState('Student');
+    const [displayName, setDisplayName] = useState('');
+    const [personalNumber, setPersonalNumber] = useState('');
+    const [email, setEmail] = useState('');
+    const [organizationNumber, setOrganizationNumber] = useState('');
+    const [password, setPassword] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const navigate = useNavigate();
 
     const getPlaceholderText = () => {
         switch (accountType) {
@@ -16,6 +26,37 @@ export default function CreateAccountPage() {
         }
     };
 
+    const handleAccountTypeClick = (type) => {
+        setAccountType(type);
+        setErrorMessage('');
+    };
+
+    const handleCreateAccount = async (event) => {
+        event.preventDefault();
+        setErrorMessage('');
+        setIsSubmitting(true);
+
+        try {
+            const registerPayload = createRegisterPayload({
+                accountType,
+                displayName,
+                email,
+                password,
+            });
+
+            await registerUser(registerPayload);
+            const loginResponse = await loginUser(email, password);
+            const me = await fetchCurrentUser(loginResponse.access_token);
+
+            persistSession(loginResponse.access_token, me.user_type);
+            navigate('/');
+        } catch (error) {
+            setErrorMessage(error.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <div className="relative max-w-md px-4 pt-24 mx-auto rounded-lg shadow-md bg-bg-main text-text-main">
             <div className="p-6 border rounded-lg shadow-lg bg-bg-secondary border-fg/5">
@@ -26,7 +67,8 @@ export default function CreateAccountPage() {
                     {['Student', 'Företag', 'Skola'].map((type) => (
                         <button
                             key={type}
-                            onClick={() => setAccountType(type)}
+                            type="button"
+                            onClick={() => handleAccountTypeClick(type)}
                             className={`px-4 py-2 rounded-lg font-medium transition-all ${
                                 accountType === type
                                     ? 'bg-accent text-white'
@@ -38,14 +80,17 @@ export default function CreateAccountPage() {
                     ))}
                 </div>
 
-                <form className="p-4 space-y-4 rounded-lg bg-bg-secondary">
+                <form onSubmit={handleCreateAccount} className="p-4 space-y-4 rounded-lg bg-bg-secondary">
                     {/* Name/Organization Input */}
                     <div>
                         <label className="block mb-1 text-sm font-medium">{accountType === 'Student' ? 'Namn' : 'Namn på ' + accountType.toLowerCase()}</label>
                         <input
                             type="text"
                             placeholder={getPlaceholderText()}
-                            className="w-full px-3 py-2 border rounded-lg bg-bg-input border-border text-text-main focus:outline-none focus:ring-2 focus:ring-accent"
+                            value={displayName}
+                            onChange={(event) => setDisplayName(event.target.value)}
+                            required
+                            className="w-full px-3 py-2 border rounded-lg bg-bg-elevated border-fg/15 text-text-main placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-accent"
                         />
                     </div>
 
@@ -56,7 +101,9 @@ export default function CreateAccountPage() {
                             <input
                                 type="text"
                                 placeholder="ÅÅÅÅMMDD-XXXX"
-                                className="w-full px-3 py-2 border rounded-lg bg-bg-input border-border text-text-main focus:outline-none focus:ring-2 focus:ring-accent"
+                                value={personalNumber}
+                                onChange={(event) => setPersonalNumber(event.target.value)}
+                                className="w-full px-3 py-2 border rounded-lg bg-bg-elevated border-fg/15 text-text-main placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-accent"
                             />
                         </div>
                     )}
@@ -67,7 +114,10 @@ export default function CreateAccountPage() {
                         <input
                             type="email"
                             placeholder={accountType === 'Student' ? 'Din e-postadress' : accountType === 'Företag' ? 'Företagsmail' : 'Skolans e-postadress'}
-                            className="w-full px-3 py-2 border rounded-lg bg-bg-input border-border text-text-main focus:outline-none focus:ring-2 focus:ring-accent"
+                            value={email}
+                            onChange={(event) => setEmail(event.target.value)}
+                            required
+                            className="w-full px-3 py-2 border rounded-lg bg-bg-elevated border-fg/15 text-text-main placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-accent"
                         />
                     </div>
 
@@ -78,7 +128,9 @@ export default function CreateAccountPage() {
                             <input
                                 type="text"
                                 placeholder="Organisationsnummer"
-                                className="w-full px-3 py-2 border rounded-lg bg-bg-input border-border text-text-main focus:outline-none focus:ring-2 focus:ring-accent"
+                                value={organizationNumber}
+                                onChange={(event) => setOrganizationNumber(event.target.value)}
+                                className="w-full px-3 py-2 border rounded-lg bg-bg-elevated border-fg/15 text-text-main placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-accent"
                             />
                         </div>
                     )}
@@ -89,16 +141,24 @@ export default function CreateAccountPage() {
                         <input
                             type="password"
                             placeholder="Välj ett lösenord"
-                            className="w-full px-3 py-2 border rounded-lg bg-bg-input border-border text-text-main focus:outline-none focus:ring-2 focus:ring-accent"
+                            value={password}
+                            onChange={(event) => setPassword(event.target.value)}
+                            required
+                            className="w-full px-3 py-2 border rounded-lg bg-bg-elevated border-fg/15 text-text-main placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-accent"
                         />
                     </div>
+
+                    {errorMessage ? (
+                        <p className="text-sm text-red-400">{errorMessage}</p>
+                    ) : null}
 
                     {/* Submit Button */}
                     <button
                         type="submit"
+                        disabled={isSubmitting}
                         className="w-full py-2 text-sm font-bold text-center text-white rounded-lg bg-accent hover:bg-accent-hover focus:ring-2 focus:ring-offset-2 focus:ring-accent"
                     >
-                        Skapa Konto
+                        {isSubmitting ? 'Skapar konto...' : 'Skapa Konto'}
                     </button>
                 </form>
             </div>

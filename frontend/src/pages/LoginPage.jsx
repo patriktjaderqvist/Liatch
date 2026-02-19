@@ -1,28 +1,36 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { fetchCurrentUser, loginUser, persistSession } from '../lib/authApi';
 
 export default function LoginPage() {
     const [accountType, setAccountType] = useState('Student');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
     const navigate = useNavigate();
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
+        setErrorMessage('');
+        setIsSubmitting(true);
 
-        // Map account type to role
-        const roleMap = {
-            'Student': 'privatperson',
-            'Företag': 'foretag',
-            'Skola': 'skola'
-        };
+        try {
+            const loginResponse = await loginUser(email, password);
+            const me = await fetchCurrentUser(loginResponse.access_token);
 
-        // Store the role in localStorage (temporary until real auth is implemented)
-        localStorage.setItem('userRole', roleMap[accountType]);
+            persistSession(loginResponse.access_token, me.user_type);
+            navigate('/');
+        } catch (error) {
+            setErrorMessage(error.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-        // Dispatch custom event to notify navbar of role change
-        window.dispatchEvent(new Event('userRoleChanged'));
-
-        // Redirect to home page
-        navigate('/');
+    const handleAccountTypeClick = (type) => {
+        setAccountType(type);
+        setErrorMessage('');
     };
 
     return (
@@ -35,7 +43,8 @@ export default function LoginPage() {
                     {['Student', 'Företag', 'Skola'].map((type) => (
                         <button
                             key={type}
-                            onClick={() => setAccountType(type)}
+                            type="button"
+                            onClick={() => handleAccountTypeClick(type)}
                             className={`px-4 py-2 rounded-lg font-medium transition-all ${accountType === type
                                 ? 'bg-accent text-white'
                                 : 'bg-bg-hover text-text-muted hover:bg-bg-hover/80'
@@ -53,7 +62,10 @@ export default function LoginPage() {
                         <input
                             type="email"
                             placeholder={accountType === 'Student' ? 'Din e-postadress' : accountType === 'Företag' ? 'Företagsmail' : 'Skolans e-postadress'}
-                            className="w-full px-3 py-2 border rounded-lg bg-bg-input border-border text-text-main focus:outline-none focus:ring-2 focus:ring-accent"
+                            value={email}
+                            onChange={(event) => setEmail(event.target.value)}
+                            required
+                            className="w-full px-3 py-2 border rounded-lg bg-bg-elevated border-fg/15 text-text-main placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-accent"
                         />
                     </div>
 
@@ -63,16 +75,24 @@ export default function LoginPage() {
                         <input
                             type="password"
                             placeholder="Ditt lösenord"
-                            className="w-full px-3 py-2 border rounded-lg bg-bg-input border-border text-text-main focus:outline-none focus:ring-2 focus:ring-accent"
+                            value={password}
+                            onChange={(event) => setPassword(event.target.value)}
+                            required
+                            className="w-full px-3 py-2 border rounded-lg bg-bg-elevated border-fg/15 text-text-main placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-accent"
                         />
                     </div>
+
+                    {errorMessage ? (
+                        <p className="text-sm text-red-400">{errorMessage}</p>
+                    ) : null}
 
                     {/* Submit Button */}
                     <button
                         type="submit"
+                        disabled={isSubmitting}
                         className="w-full py-2 text-sm font-bold text-center text-white rounded-lg bg-accent hover:bg-accent-hover focus:ring-2 focus:ring-offset-2 focus:ring-accent"
                     >
-                        Logga in
+                        {isSubmitting ? 'Loggar in...' : 'Logga in'}
                     </button>
                 </form>
             </div>

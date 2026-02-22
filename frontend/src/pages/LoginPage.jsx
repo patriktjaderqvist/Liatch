@@ -19,7 +19,7 @@ export default function LoginPage() {
             const loginResponse = await loginUser(email, password);
             const me = await fetchCurrentUser(loginResponse.access_token);
 
-            persistSession(loginResponse.access_token, me.user_type);
+            persistSession(loginResponse.access_token, me.user_type, me);
             navigate('/');
         } catch (error) {
             setErrorMessage(error.message);

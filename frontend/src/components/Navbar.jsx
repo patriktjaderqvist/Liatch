@@ -4,26 +4,37 @@ import { clearSession, logoutUser } from '../lib/authApi';
 
 export default function Navbar() {
     const [userRole, setUserRole] = useState(null);
+    const [userDisplayName, setUserDisplayName] = useState(null);
     const navigate = useNavigate();
 
-    // Check localStorage for user role on component mount and when storage changes
+    const getRoleFallbackLabel = (role) => {
+        if (role === 'privatperson') return 'Studentkonto';
+        if (role === 'foretag') return 'Företagskonto';
+        if (role === 'skola') return 'Skolkonto';
+        return 'Inloggad användare';
+    };
+
+    // Check session data on component mount and when storage changes.
     useEffect(() => {
-        const checkUserRole = () => {
+        const syncSession = () => {
             const role = localStorage.getItem('userRole');
+            const displayName = localStorage.getItem('userDisplayName');
+            const email = localStorage.getItem('userEmail');
             setUserRole(role);
+            setUserDisplayName(displayName || email || null);
         };
 
-        checkUserRole();
+        syncSession();
 
         // Listen for storage changes (e.g., when user logs in)
-        window.addEventListener('storage', checkUserRole);
+        window.addEventListener('storage', syncSession);
 
         // Custom event for same-window storage changes
-        window.addEventListener('userRoleChanged', checkUserRole);
+        window.addEventListener('userRoleChanged', syncSession);
 
         return () => {
-            window.removeEventListener('storage', checkUserRole);
-            window.removeEventListener('userRoleChanged', checkUserRole);
+            window.removeEventListener('storage', syncSession);
+            window.removeEventListener('userRoleChanged', syncSession);
         };
     }, []);
 
@@ -39,6 +50,7 @@ export default function Navbar() {
 
         clearSession();
         setUserRole(null);
+        setUserDisplayName(null);
         navigate('/');
     };
 
@@ -116,12 +128,17 @@ export default function Navbar() {
                                 </Link>
                             </>
                         ) : (
-                            <button
-                                onClick={handleLogout}
-                                className="text-sm font-medium text-text-muted hover:text-text-main transition-colors"
-                            >
-                                Logga ut
-                            </button>
+                            <>
+                                <p className="text-xs text-text-dim whitespace-nowrap max-w-[220px] truncate">
+                                    Inloggad som: {userDisplayName || getRoleFallbackLabel(userRole)}
+                                </p>
+                                <button
+                                    onClick={handleLogout}
+                                    className="text-sm font-medium text-text-muted hover:text-text-main transition-colors"
+                                >
+                                    Logga ut
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>

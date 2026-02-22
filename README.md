@@ -49,7 +49,7 @@ Projektet är byggt för att uppfylla kursens krav på:
 - FastAPI
 - SQLAlchemy
 - Pydantic
-- JWT-baserad autentisering
+- JWT-baserad autentisering(ändrad till bcrypt enligt lektioner)
 
 **Databas**
 - PostgreSQL
@@ -105,6 +105,9 @@ venv/bin/alembic upgrade head
 # Existing local DB that already has tables:
 # mark it as baseline without re-running initial create-table migration
 venv/bin/alembic stamp head
+
+# Seed dummy data (idempotent)
+venv/bin/python -m app.seed
 
 # Frontend
 cd frontend

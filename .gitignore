@@ -16,3 +16,6 @@ dist/
 # Env
 .env
 .env.*
+
+# Local DB
+backend/liatch.db

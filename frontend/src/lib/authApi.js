@@ -33,6 +33,12 @@ const userTypeToRole = {
     school: "skola",
 };
 
+const roleFallbackDisplay = {
+    student: "Studentkonto",
+    company: "Företagskonto",
+    school: "Skolkonto",
+};
+
 function extractApiErrorMessage(responseBody, fallbackMessage) {
     if (!responseBody) {
         return fallbackMessage;
@@ -90,6 +96,20 @@ export function mapAccountTypeToUserType(accountType) {
 
 export function mapUserTypeToRole(userType) {
     return userTypeToRole[userType] || null;
+}
+
+function toDisplayName(user) {
+    const first = (user?.first_name || "").trim();
+    const last = (user?.last_name || "").trim();
+    const fullName = `${first} ${last}`.trim();
+
+    if (fullName) {
+        return fullName;
+    }
+    if (typeof user?.email === "string" && user.email.trim()) {
+        return user.email.trim();
+    }
+    return roleFallbackDisplay[user?.user_type] || "Inloggad användare";
 }
 
 export function createRegisterPayload({ accountType, displayName, email, password }) {
@@ -156,7 +176,7 @@ export async function logoutUser(accessToken) {
     );
 }
 
-export function persistSession(accessToken, userType) {
+export function persistSession(accessToken, userType, user = null) {
     localStorage.setItem("accessToken", accessToken);
 
     const role = mapUserTypeToRole(userType);
@@ -166,11 +186,20 @@ export function persistSession(accessToken, userType) {
         localStorage.removeItem("userRole");
     }
 
+    if (user) {
+        localStorage.setItem("userDisplayName", toDisplayName(user));
+        if (user.email) {
+            localStorage.setItem("userEmail", user.email);
+        }
+    }
+
     window.dispatchEvent(new Event("userRoleChanged"));
 }
 
 export function clearSession() {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("userRole");
+    localStorage.removeItem("userDisplayName");
+    localStorage.removeItem("userEmail");
     window.dispatchEvent(new Event("userRoleChanged"));
 }

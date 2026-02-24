@@ -35,3 +35,54 @@ class UserOutSchema(BaseModel):
 class TokenSchema(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class CompanyBriefSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    city: str | None
+    website: str | None
+
+
+class JobAdOutSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    company_id: int
+    company: CompanyBriefSchema
+    title: str
+    description: str
+    location: str | None
+    employment_type: str | None
+    remote: bool
+    starts_at: datetime | None
+    ends_at: datetime | None
+    application_deadline: datetime | None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class JobAdCreateSchema(BaseModel):
+    title: str = Field(max_length=200)
+    description: str
+    location: str | None = None
+    employment_type: str | None = Field(default=None, max_length=60)
+    remote: bool = False
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
+    application_deadline: datetime | None = None
+
+
+class JobAdUpdateSchema(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    description: str | None = None
+    location: str | None = None
+    employment_type: str | None = None
+    remote: bool | None = None
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
+    application_deadline: datetime | None = None
+    is_active: bool | None = None

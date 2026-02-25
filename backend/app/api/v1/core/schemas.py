@@ -86,3 +86,51 @@ class JobAdUpdateSchema(BaseModel):
     ends_at: datetime | None = None
     application_deadline: datetime | None = None
     is_active: bool | None = None
+
+
+class StudentProfileOutSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    student_id: int
+    headline: str | None
+    bio: str | None
+    phone: str | None
+    city: str | None
+    linkedin_url: str | None
+    github_url: str | None
+    portfolio_url: str | None
+    cv_url: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class StudentOutSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    first_name: str
+    last_name: str
+    personal_number: str | None
+    program: str | None
+    school_id: int | None
+    profile: StudentProfileOutSchema | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class StudentUpdateSchema(BaseModel):
+    first_name: str | None = Field(default=None, max_length=120)
+    last_name: str | None = Field(default=None, max_length=120)
+    program: str | None = Field(default=None, max_length=150)
+
+
+class StudentProfileUpdateSchema(BaseModel):
+    headline: str | None = Field(default=None, max_length=180)
+    bio: str | None = None
+    phone: str | None = Field(default=None, max_length=30)
+    city: str | None = Field(default=None, max_length=120)
+    linkedin_url: str | None = Field(default=None, max_length=500)
+    github_url: str | None = Field(default=None, max_length=500)
+    portfolio_url: str | None = Field(default=None, max_length=500)
+    cv_url: str | None = Field(default=None, max_length=500)

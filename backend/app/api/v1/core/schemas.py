@@ -134,3 +134,28 @@ class StudentProfileUpdateSchema(BaseModel):
     github_url: str | None = Field(default=None, max_length=500)
     portfolio_url: str | None = Field(default=None, max_length=500)
     cv_url: str | None = Field(default=None, max_length=500)
+
+
+class CompanyOutSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    organization_number: str | None
+    postal_code: str | None
+    city: str | None
+    email: str | None
+    description: str | None
+    website: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class CompanyUpdateSchema(BaseModel):
+    name: str | None = Field(default=None, max_length=150)
+    organization_number: str | None = Field(default=None, max_length=50)
+    postal_code: str | None = Field(default=None, max_length=20)
+    city: str | None = Field(default=None, max_length=120)
+    email: str | None = Field(default=None, max_length=320)
+    description: str | None = None
+    website: str | None = Field(default=None, max_length=500)

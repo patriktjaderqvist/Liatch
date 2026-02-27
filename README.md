@@ -134,11 +134,18 @@ cd ~/liatch
 ./deploy.sh
 ```
 
-Om backend-service heter något annat än `liatch-backend`:
+Om backend-service heter något annat än `backend`:
 
 ```bash
 cd ~/liatch
 BACKEND_SERVICE=ditt-service-namn ./deploy.sh
+```
+
+För att även fylla på dummydata vid deploy:
+
+```bash
+cd ~/liatch
+RUN_SEED=1 ./deploy.sh
 ```
 
 Om du redan har pullat manuellt och bara vill köra build/migration/restart:

@@ -11,7 +11,7 @@ BACKEND_DIR="${BACKEND_DIR:-backend}"
 FRONTEND_DIR="${FRONTEND_DIR:-frontend}"
 WEB_ROOT="${WEB_ROOT:-/var/www/html}"
 
-BACKEND_SERVICE="${BACKEND_SERVICE:-liatch-backend}"
+BACKEND_SERVICE="${BACKEND_SERVICE:-backend}"
 NGINX_SERVICE="${NGINX_SERVICE:-nginx}"
 
 NPM_INSTALL_MODE="${NPM_INSTALL_MODE:-ci}" # ci | install

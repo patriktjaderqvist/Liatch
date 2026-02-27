@@ -85,7 +85,7 @@ Projektet utvecklas agilt med:
 
 ---
 
-## Setup (kommer uppdateras)
+## Setup (lokalt)
 
 ```bash
 # Backend
@@ -116,6 +116,56 @@ npm run dev
 
 # Optional: point frontend auth API to another backend URL
 # VITE_API_BASE_URL=http://localhost:8000 npm run dev
+```
+
+## Deploy på EC2 (24/7-miljö)
+
+Använd deploy-scriptet i projektroten för att:
+- hämta senaste kod
+- installera dependencies
+- köra Alembic-migrationer
+- bygga frontend
+- synka till Nginx web root
+- restarta backend-service + reloada nginx
+- köra health checks
+
+```bash
+cd ~/liatch
+./deploy.sh
+```
+
+Om backend-service heter något annat än `backend`:
+
+```bash
+cd ~/liatch
+BACKEND_SERVICE=ditt-service-namn ./deploy.sh
+```
+
+För att även fylla på dummydata vid deploy:
+
+```bash
+cd ~/liatch
+RUN_SEED=1 ./deploy.sh
+```
+
+Om du redan har pullat manuellt och bara vill köra build/migration/restart:
+
+```bash
+cd ~/liatch
+PULL_LATEST=0 ./deploy.sh
+```
+
+Om du kör scriptet i en miljö utan `systemctl` (t.ex. lokal Mac), hoppa över service-steg:
+
+```bash
+cd ~/liatch
+PULL_LATEST=0 RESTART_SERVICES=0 RUN_HEALTHCHECKS=0 ./deploy.sh
+```
+
+Tips: hitta service-namn med:
+
+```bash
+systemctl list-unit-files --type=service | grep -Ei 'liatch|uvicorn|fastapi|backend'
 ```
 
 Status

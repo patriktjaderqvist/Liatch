@@ -74,7 +74,7 @@ async function requestJson(url, options, fallbackMessage) {
 }
 
 function splitDisplayName(displayName) {
-    const cleaned = displayName.trim().replace(/\s+/g, " ");
+    const cleaned = (displayName || "").trim().replace(/\s+/g, " ");
     if (!cleaned) {
         return { firstName: null, lastName: null };
     }
@@ -112,15 +112,30 @@ function toDisplayName(user) {
     return roleFallbackDisplay[user?.user_type] || "Inloggad användare";
 }
 
-export function createRegisterPayload({ accountType, displayName, email, password }) {
+export function createRegisterPayload({
+    accountType,
+    displayName,
+    email,
+    password,
+    personalNumber,
+    organizationNumber,
+}) {
     const userType = mapAccountTypeToUserType(accountType);
     const { firstName, lastName } = splitDisplayName(displayName);
+    const trimmedDisplayName = (displayName || "").trim().replace(/\s+/g, " ");
+    const trimmedPersonalNumber =
+        typeof personalNumber === "string" ? personalNumber.trim() : "";
+    const trimmedOrganizationNumber =
+        typeof organizationNumber === "string" ? organizationNumber.trim() : "";
 
     return {
         email,
         password,
         first_name: firstName,
         last_name: lastName,
+        display_name: trimmedDisplayName || null,
+        personal_number: userType === "student" ? (trimmedPersonalNumber || null) : null,
+        organization_number: userType === "student" ? null : (trimmedOrganizationNumber || null),
         user_type: userType,
     };
 }

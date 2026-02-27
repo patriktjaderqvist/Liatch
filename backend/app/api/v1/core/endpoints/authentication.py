@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.v1.core.models import Token, User
+from app.api.v1.core.models import Company, School, Student, Token, User, UserType
 from app.api.v1.core.schemas import TokenSchema, UserOutSchema, UserRegisterSchema
 from app.db_setup import get_db
 from app.security import (
@@ -18,6 +18,139 @@ from app.security import (
 )
 
 router = APIRouter(tags=["auth"], prefix="/auth")
+
+
+def _split_display_name(display_name: str | None) -> tuple[str | None, str | None]:
+    if not display_name:
+        return None, None
+
+    cleaned = " ".join(display_name.split()).strip()
+    if not cleaned:
+        return None, None
+
+    parts = cleaned.split(" ")
+    if len(parts) == 1:
+        return parts[0], None
+    return parts[0], " ".join(parts[1:])
+
+
+def _resolve_entity_name(user: UserRegisterSchema) -> str | None:
+    if user.display_name and user.display_name.strip():
+        return " ".join(user.display_name.split()).strip()
+
+    first = (user.first_name or "").strip()
+    last = (user.last_name or "").strip()
+    full_name = f"{first} {last}".strip()
+    return full_name or None
+
+
+def _create_or_reuse_student(user: UserRegisterSchema, db: Session) -> int:
+    first_name = (user.first_name or "").strip()
+    last_name = (user.last_name or "").strip()
+
+    if not first_name:
+        split_first, split_last = _split_display_name(user.display_name)
+        first_name = split_first or ""
+        if not last_name:
+            last_name = split_last or ""
+
+    if not first_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Student account requires a name",
+        )
+
+    if not last_name:
+        # Keep required DB field non-null even for single-name test/dummy users.
+        last_name = "-"
+
+    existing_student = None
+    if user.personal_number:
+        existing_student = db.scalars(
+            select(Student).where(Student.personal_number == user.personal_number)
+        ).first()
+
+    if existing_student:
+        existing_student.first_name = first_name
+        existing_student.last_name = last_name
+        if user.school_id is not None:
+            existing_student.school_id = user.school_id
+        db.flush()
+        return existing_student.id
+
+    student = Student(
+        first_name=first_name,
+        last_name=last_name,
+        personal_number=user.personal_number,
+        school_id=user.school_id,
+    )
+    db.add(student)
+    db.flush()
+    return student.id
+
+
+def _create_or_reuse_company(user: UserRegisterSchema, db: Session) -> int:
+    company_name = _resolve_entity_name(user)
+    if not company_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Company account requires a company name",
+        )
+
+    company = None
+    if user.organization_number:
+        company = db.scalars(
+            select(Company).where(Company.organization_number == user.organization_number)
+        ).first()
+
+    if not company:
+        company = db.scalars(select(Company).where(Company.name == company_name)).first()
+
+    if not company:
+        company = Company(
+            name=company_name,
+            organization_number=user.organization_number,
+            email=user.email,
+        )
+        db.add(company)
+    else:
+        if user.organization_number and not company.organization_number:
+            company.organization_number = user.organization_number
+
+    db.flush()
+    return company.id
+
+
+def _create_or_reuse_school(user: UserRegisterSchema, db: Session) -> int:
+    school_name = _resolve_entity_name(user)
+    if not school_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="School account requires a school name",
+        )
+
+    school = None
+    if user.organization_number:
+        school = db.scalars(
+            select(School).where(School.organization_number == user.organization_number)
+        ).first()
+
+    if not school:
+        school = db.scalars(select(School).where(School.name == school_name)).first()
+
+    if not school:
+        school = School(
+            name=school_name,
+            organization_number=user.organization_number,
+            email=user.email,
+        )
+        db.add(school)
+    else:
+        if user.organization_number and not school.organization_number:
+            school.organization_number = user.organization_number
+
+    db.flush()
+    return school.id
 
 
 @router.post(
@@ -34,26 +167,53 @@ def register_user(user: UserRegisterSchema, db: Session = Depends(get_db)) -> Us
     - returns UserOutSchema (never returns hashed_password)
     """
     hashed = hash_password(user.password)
+    student_id = user.student_id
+    school_id = user.school_id
+    company_id = user.company_id
+
+    if user.user_type == UserType.STUDENT and not student_id:
+        student_id = _create_or_reuse_student(user, db)
+    elif user.user_type == UserType.COMPANY and not company_id:
+        company_id = _create_or_reuse_company(user, db)
+    elif user.user_type == UserType.SCHOOL and not school_id:
+        school_id = _create_or_reuse_school(user, db)
+
+    first_name = user.first_name
+    last_name = user.last_name
+    if user.user_type != UserType.STUDENT and not first_name:
+        first_name = _resolve_entity_name(user)
+        last_name = None
 
     new_user = User(
         email=user.email,
-        first_name=user.first_name,
-        last_name=user.last_name,
+        first_name=first_name,
+        last_name=last_name,
         hashed_password=hashed,
         user_type=user.user_type,  
-        student_id=user.student_id,
-        school_id=user.school_id,
-        company_id=user.company_id,  
+        student_id=student_id,
+        school_id=school_id,
+        company_id=company_id,  
     )
 
     db.add(new_user)
     try:
         db.commit()
-    except IntegrityError:
+    except IntegrityError as exc:
         db.rollback()
+
+        lowered_message = str(getattr(exc, "orig", exc)).lower()
+        if "personal_number" in lowered_message:
+            detail = "Personal number already exists"
+        elif "organization_number" in lowered_message:
+            detail = "Organization number already exists"
+        elif "email" in lowered_message:
+            detail = "Email already exists"
+        else:
+            detail = "Could not create account because of duplicate data"
+
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email already exists",
+            detail=detail,
         )
 
     db.refresh(new_user)

@@ -40,7 +40,9 @@ export default function CreateAccountPage() {
             const registerPayload = createRegisterPayload({
                 accountType,
                 displayName,
+                personalNumber,
                 email,
+                organizationNumber,
                 password,
             });
 

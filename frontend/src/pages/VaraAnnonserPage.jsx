@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { deleteJobAd, fetchMyJobAds } from '../lib/jobAdsApi';
 
 function formatDate(dateStr) {
@@ -12,6 +12,7 @@ function formatDate(dateStr) {
 }
 
 function AdRow({ ad, onDelete }) {
+    const navigate = useNavigate();
     const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDelete = async () => {
@@ -54,13 +55,21 @@ function AdRow({ ad, onDelete }) {
                 </div>
             </div>
 
-            <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="px-4 py-2 text-sm font-medium text-red-400 transition-all border rounded-lg shrink-0 hover:text-red-300 border-red-500/20 hover:border-red-500/40 disabled:opacity-50"
-            >
-                {isDeleting ? 'Tar bort...' : 'Ta bort'}
-            </button>
+            <div className="flex gap-2 shrink-0">
+                <button
+                    onClick={() => navigate(`/redigera-annons/${ad.id}`)}
+                    className="px-4 py-2 text-sm font-medium transition-all border rounded-lg text-text-muted hover:text-text-main border-fg/10 hover:border-fg/20"
+                >
+                    Redigera
+                </button>
+                <button
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="px-4 py-2 text-sm font-medium text-red-400 transition-all border rounded-lg hover:text-red-300 border-red-500/20 hover:border-red-500/40 disabled:opacity-50"
+                >
+                    {isDeleting ? 'Tar bort...' : 'Ta bort'}
+                </button>
+            </div>
         </div>
     );
 }

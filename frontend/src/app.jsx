@@ -18,6 +18,8 @@ import MinaSokningarPage from './pages/MinaSokningarPage';
 import MinProfilPage from './pages/MinProfilPage';
 import VaraAnnonserPage from './pages/VaraAnnonserPage';
 import SkapaAnnonsPage from './pages/SkapaAnnonsPage';
+import RedigeraAnnonsPage from './pages/RedigeraAnnonsPage';
+import JobAdPage from './pages/JobAdPage';
 import ForetagsprofilPage from './pages/ForetagsprofilPage';
 import StudenterPage from './pages/StudenterPage';
 import SkolprofilPage from './pages/SkolprofilPage';
@@ -26,10 +28,11 @@ function App() {
     return (
         <>
             <Navbar />
-            <main className="pt-0 relative">
+            <main className="relative pt-0">
                 <Routes>
                     <Route path="/" element={<Hero />} />
                     <Route path="/annonser" element={<AdsPage />} />
+                    <Route path="/annonser/:id" element={<JobAdPage />} />
                     <Route path="/foretag" element={<CompaniesPage />} />
                     <Route path="/om-oss" element={<AboutPage />} />
                     <Route path="/skolor" element={<SchoolsPage />} />
@@ -44,6 +47,7 @@ function App() {
                     <Route path="/min-profil" element={<MinProfilPage />} />
                     <Route path="/vara-annonser" element={<VaraAnnonserPage />} />
                     <Route path="/skapa-annons" element={<SkapaAnnonsPage />} />
+                    <Route path="/redigera-annons/:id" element={<RedigeraAnnonsPage />} />
                     <Route path="/foretagsprofil" element={<ForetagsprofilPage />} />
                     <Route path="/studenter" element={<StudenterPage />} />
                     <Route path="/skolprofil" element={<SkolprofilPage />} />

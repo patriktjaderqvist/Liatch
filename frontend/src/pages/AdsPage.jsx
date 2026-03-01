@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchJobAds } from '../lib/jobAdsApi';
 
 function formatDate(dateStr) {
@@ -12,7 +13,7 @@ function formatDate(dateStr) {
 
 function AdCard({ ad }) {
     return (
-        <div className="flex flex-col gap-3 p-6 glass-card rounded-2xl">
+        <Link to={`/annonser/${ad.id}`} className="flex flex-col gap-3 p-6 transition-colors cursor-pointer glass-card rounded-2xl hover:border-accent/30">
             <div className="flex items-start justify-between gap-4">
                 <h2 className="text-lg font-bold leading-snug text-text-main">{ad.title}</h2>
                 {ad.remote && (
@@ -55,7 +56,7 @@ function AdCard({ ad }) {
             <p className="text-sm leading-relaxed text-text-muted line-clamp-3">
                 {ad.description}
             </p>
-        </div>
+        </Link>
     );
 }
 

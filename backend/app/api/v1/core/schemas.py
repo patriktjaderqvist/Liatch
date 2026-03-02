@@ -46,6 +46,14 @@ class CompanyBriefSchema(BaseModel):
     website: str | None
 
 
+class JobAdBriefSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    company: CompanyBriefSchema
+
+
 class JobAdOutSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -134,6 +142,22 @@ class StudentProfileUpdateSchema(BaseModel):
     github_url: str | None = Field(default=None, max_length=500)
     portfolio_url: str | None = Field(default=None, max_length=500)
     cv_url: str | None = Field(default=None, max_length=500)
+
+
+class ApplicationCreateSchema(BaseModel):
+    job_ad_id: int
+    cover_letter: str | None = None
+
+
+class ApplicationOutSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    job_ad_id: int
+    job_ad: JobAdBriefSchema
+    status: str
+    cover_letter: str | None
+    created_at: datetime
 
 
 class CompanyOutSchema(BaseModel):

@@ -60,10 +60,10 @@ export default function Navbar() {
             // Public navigation (not logged in)
             return (
                 <>
-                    <Link to="/annonser" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">SÖK PRAKTIK</Link>
-                    <Link to="/foretag" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">FÖR FÖRETAG</Link>
-                    <Link to="/skolor" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">FÖR SKOLOR</Link>
-                    <Link to="/om-oss" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">OM OSS</Link>
+                    <Link to="/annonser" className="text-sm font-medium tracking-wide transition-colors text-text-muted hover:text-text-main">SÖK PRAKTIK</Link>
+                    <Link to="/foretag" className="text-sm font-medium tracking-wide transition-colors text-text-muted hover:text-text-main">FÖR FÖRETAG</Link>
+                    <Link to="/skolor" className="text-sm font-medium tracking-wide transition-colors text-text-muted hover:text-text-main">FÖR SKOLOR</Link>
+                    <Link to="/om-oss" className="text-sm font-medium tracking-wide transition-colors text-text-muted hover:text-text-main">OM OSS</Link>
                 </>
             );
         }
@@ -71,9 +71,9 @@ export default function Navbar() {
         if (userRole === 'privatperson') {
             return (
                 <>
-                    <Link to="/annonser" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">ANNONSER</Link>
-                    <Link to="/mina-sokningar" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">MINA SÖKNINGAR</Link>
-                    <Link to="/min-profil" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">MIN PROFIL</Link>
+                    <Link to="/annonser" className="text-sm font-medium tracking-wide transition-colors text-text-muted hover:text-text-main">ANNONSER</Link>
+                    <Link to="/mina-sokningar" className="text-sm font-medium tracking-wide transition-colors text-text-muted hover:text-text-main">MINA ANSÖKNINGAR</Link>
+                    <Link to="/min-profil" className="text-sm font-medium tracking-wide transition-colors text-text-muted hover:text-text-main">MIN PROFIL</Link>
                 </>
             );
         }
@@ -81,9 +81,9 @@ export default function Navbar() {
         if (userRole === 'foretag') {
             return (
                 <>
-                    <Link to="/vara-annonser" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">VÅRA ANNONSER</Link>
-                    <Link to="/skapa-annons" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">SKAPA ANNONS</Link>
-                    <Link to="/foretagsprofil" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">FÖRETAGSPROFIL</Link>
+                    <Link to="/vara-annonser" className="text-sm font-medium tracking-wide transition-colors text-text-muted hover:text-text-main">VÅRA ANNONSER</Link>
+                    <Link to="/skapa-annons" className="text-sm font-medium tracking-wide transition-colors text-text-muted hover:text-text-main">SKAPA ANNONS</Link>
+                    <Link to="/foretagsprofil" className="text-sm font-medium tracking-wide transition-colors text-text-muted hover:text-text-main">FÖRETAGSPROFIL</Link>
                 </>
             );
         }
@@ -91,30 +91,30 @@ export default function Navbar() {
         if (userRole === 'skola') {
             return (
                 <>
-                    <Link to="/annonser" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">ANNONSER</Link>
-                    <Link to="/studenter" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">STUDENTER</Link>
-                    <Link to="/skolprofil" className="text-sm font-medium text-text-muted hover:text-text-main transition-colors tracking-wide">SKOLPROFIL</Link>
+                    <Link to="/annonser" className="text-sm font-medium tracking-wide transition-colors text-text-muted hover:text-text-main">ANNONSER</Link>
+                    <Link to="/studenter" className="text-sm font-medium tracking-wide transition-colors text-text-muted hover:text-text-main">STUDENTER</Link>
+                    <Link to="/skolprofil" className="text-sm font-medium tracking-wide transition-colors text-text-muted hover:text-text-main">SKOLPROFIL</Link>
                 </>
             );
         }
     };
 
     return (
-        <nav className="fixed w-full z-50 top-0 transition-all duration-300">
-            <div className="glass border-b border-fg/5 bg-bg-void/80">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <nav className="fixed top-0 z-50 w-full transition-all duration-300">
+            <div className="border-b glass border-fg/5 bg-bg-void/80">
+                <div className="flex items-center justify-between h-20 px-6 mx-auto max-w-7xl">
                     {/* Logo */}
                     <Link to="/" className="flex items-center gap-3 group">
-                        <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
+                        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent">
                             <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                 <path d="M13 2L3 14h9v8l10-12h-9l9-8z" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         </div>
-                        <span className="font-display text-2xl font-bold tracking-tight text-text-main">Liatch<span className="text-accent">.</span></span>
+                        <span className="text-2xl font-bold tracking-tight font-display text-text-main">Liatch<span className="text-accent">.</span></span>
                     </Link>
 
                     {/* Desktop Nav */}
-                    <div className="hidden md:flex items-center gap-8">
+                    <div className="items-center hidden gap-8 md:flex">
                         {renderNavItems()}
                     </div>
 
@@ -122,7 +122,7 @@ export default function Navbar() {
                     <div className="flex items-center gap-6">
                         {!userRole ? (
                             <>
-                                <Link to="/login" className="hidden md:block text-sm font-medium text-text-muted hover:text-text-main transition-colors">Logga in</Link>
+                                <Link to="/login" className="hidden text-sm font-medium transition-colors md:block text-text-muted hover:text-text-main">Logga in</Link>
                                 <Link to="/skapa-konto" className="bg-fg text-text-inverse hover:bg-accent hover:text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(255,77,0,0.4)]">
                                     Skapa konto
                                 </Link>
@@ -134,7 +134,7 @@ export default function Navbar() {
                                 </p>
                                 <button
                                     onClick={handleLogout}
-                                    className="text-sm font-medium text-text-muted hover:text-text-main transition-colors"
+                                    className="text-sm font-medium transition-colors text-text-muted hover:text-text-main"
                                 >
                                     Logga ut
                                 </button>

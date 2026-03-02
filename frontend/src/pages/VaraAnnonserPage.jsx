@@ -78,6 +78,7 @@ export default function VaraAnnonserPage() {
     const [ads, setAds] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [deleteError, setDeleteError] = useState('');
 
     useEffect(() => {
         const accessToken = localStorage.getItem('accessToken');
@@ -95,11 +96,12 @@ export default function VaraAnnonserPage() {
 
     const handleDelete = async (id) => {
         const accessToken = localStorage.getItem('accessToken');
+        setDeleteError('');
         try {
             await deleteJobAd(id, accessToken);
             setAds((prev) => prev.filter((ad) => ad.id !== id));
         } catch (err) {
-            alert(err.message);
+            setDeleteError(err.message);
         }
     };
 
@@ -124,6 +126,10 @@ export default function VaraAnnonserPage() {
 
             {error && (
                 <p className="text-sm text-red-400">{error}</p>
+            )}
+
+            {deleteError && (
+                <p className="text-sm text-red-400">{deleteError}</p>
             )}
 
             {!isLoading && !error && ads.length === 0 && (

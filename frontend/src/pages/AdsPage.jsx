@@ -5,6 +5,38 @@ import { fetchMyStudent } from '../lib/studentApi';
 
 const PAGE_SIZE = 12;
 const GUEST_PREVIEW_COUNT = 3;
+const DUMMY_LOCKED_ADS = [
+    {
+        id: 'locked-1',
+        title: 'LIA Product Designer',
+        company: { name: 'Tech Studio AB' },
+        location: 'Stockholm',
+        employment_type: 'LIA',
+        remote: true,
+        application_deadline: '2026-04-10T00:00:00Z',
+        description: 'Designarbete i tvärfunktionellt team med fokus på användarresa och prototyper.',
+    },
+    {
+        id: 'locked-2',
+        title: 'LIA Backend Engineer',
+        company: { name: 'Cloudforge Nordic' },
+        location: 'Göteborg',
+        employment_type: 'LIA',
+        remote: false,
+        application_deadline: '2026-04-12T00:00:00Z',
+        description: 'Bygg API:er och datalager med fokus på skalbarhet, kvalitet och driftsäkerhet.',
+    },
+    {
+        id: 'locked-3',
+        title: 'LIA Frontend Developer',
+        company: { name: 'Nextwave Digital' },
+        location: 'Malmö',
+        employment_type: 'LIA',
+        remote: true,
+        application_deadline: '2026-04-15T00:00:00Z',
+        description: 'Utveckla komponenter och gränssnitt i moderna frontend-ramverk.',
+    },
+];
 
 const QUICK_FILTERS = [
     {
@@ -296,7 +328,12 @@ export default function AdsPage() {
 
     const visibleAds = isLoggedIn ? pagedAds : filteredAndSortedAds.slice(0, GUEST_PREVIEW_COUNT);
     const lockedAds = isLoggedIn ? [] : filteredAndSortedAds.slice(GUEST_PREVIEW_COUNT);
-    const hasLockedAds = lockedAds.length > 0;
+    const lockedPreviewAds = isLoggedIn
+        ? []
+        : lockedAds.length > 0
+            ? lockedAds
+            : DUMMY_LOCKED_ADS;
+    const showLoginWall = !isLoggedIn && filteredAndSortedAds.length > 0;
 
     const handleSearchChange = (event) => {
         const nextValue = event.target.value;
@@ -460,7 +497,7 @@ export default function AdsPage() {
                         ))}
                     </div>
 
-                    {!isLoggedIn && hasLockedAds && (
+                    {showLoginWall && (
                         <div className="mt-8">
                             <div className="relative z-20 max-w-xl px-5 py-5 mx-auto mb-[-28px] text-center border rounded-2xl border-accent/25 bg-bg-void/85 backdrop-blur-md">
                                 <p className="text-sm text-text-main">Logga in om du vill se fler annonser.</p>
@@ -484,7 +521,7 @@ export default function AdsPage() {
                                 <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-b from-bg-void/60 via-bg-void/40 to-bg-void/15"></div>
 
                                 <div className="grid grid-cols-1 gap-5 p-5 md:grid-cols-2 lg:grid-cols-3">
-                                    {lockedAds.map((ad) => (
+                                    {lockedPreviewAds.map((ad) => (
                                         <div key={ad.id} className="relative pointer-events-none select-none">
                                             <div className="blur-[3px] opacity-80">
                                                 <AdCard ad={ad} to={`/annonser/${ad.id}`} />

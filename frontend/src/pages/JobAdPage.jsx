@@ -175,7 +175,7 @@ export default function JobAdPage() {
                     <button
                         onClick={handleApply}
                         disabled={isApplying}
-                        className="w-full py-2.5 text-sm font-bold text-white rounded-lg bg-accent hover:bg-accent/90 hover:shadow-[0_0_20px_rgba(255,77,0,0.3)] disabled:opacity-60 transition-all"
+                        className="w-full py-2.5 text-sm font-bold text-white rounded-lg bg-accent hover:bg-accent/90 hover:shadow-[0_0_20px_rgba(var(--accent-rgb),0.3)] disabled:opacity-60 transition-all"
                     >
                         {isApplying ? 'Skickar...' : 'Skicka ansökan'}
                     </button>

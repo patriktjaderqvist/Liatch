@@ -26,9 +26,9 @@ export default {
 
                 // Accent
                 accent: {
-                    DEFAULT: '#ff4d00',
-                    dim: 'rgba(255, 77, 0, 0.1)',
-                    glow: 'rgba(255, 77, 0, 0.4)',
+                    DEFAULT: 'rgb(var(--accent-rgb) / <alpha-value>)',
+                    dim: 'rgb(var(--accent-rgb) / 0.1)',
+                    glow: 'rgb(var(--accent-rgb) / 0.4)',
                 }
             },
             fontFamily: {
@@ -45,8 +45,8 @@ export default {
             },
             keyframes: {
                 'pulse-glow': {
-                    '0%, 100%': { opacity: '1', boxShadow: '0 0 20px rgba(255, 77, 0, 0.2)' },
-                    '50%': { opacity: '0.8', boxShadow: '0 0 40px rgba(255, 77, 0, 0.4)' },
+                    '0%, 100%': { opacity: '1', boxShadow: '0 0 20px rgba(var(--accent-rgb), 0.2)' },
+                    '50%': { opacity: '0.8', boxShadow: '0 0 40px rgba(var(--accent-rgb), 0.4)' },
                 },
                 'float': {
                     '0%, 100%': { transform: 'translateY(0)' },

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchCurrentUser, loginUser, persistSession } from '../lib/authApi';
+import { getAccountTypeFromStoredPortalTheme, setPortalThemeFromAccountType } from '../lib/portalTheme';
 
 export default function LoginPage() {
-    const [accountType, setAccountType] = useState('Student');
+    const [accountType, setAccountType] = useState(() => getAccountTypeFromStoredPortalTheme());
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,6 +35,7 @@ export default function LoginPage() {
 
     const handleAccountTypeClick = (type) => {
         setAccountType(type);
+        setPortalThemeFromAccountType(type);
         setErrorMessage('');
     };
 
@@ -94,7 +96,7 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="w-full py-2 text-sm font-bold text-center text-white rounded-lg bg-accent hover:bg-accent-hover focus:ring-2 focus:ring-offset-2 focus:ring-accent"
+                        className="w-full py-2 text-sm font-bold text-center text-white rounded-lg bg-accent hover:bg-accent/90 focus:ring-2 focus:ring-offset-2 focus:ring-accent"
                     >
                         {isSubmitting ? 'Loggar in...' : 'Logga in'}
                     </button>

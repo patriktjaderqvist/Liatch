@@ -53,7 +53,7 @@ export default function SchoolsPage() {
                 </p>
                 <Link
                     to="/skapa-konto"
-                    className="inline-block bg-accent hover:bg-accent/90 text-white font-medium px-8 py-3 rounded-xl transition-all hover:shadow-[0_0_30px_rgba(255,77,0,0.3)] hover:scale-[1.02]"
+                    className="inline-block bg-accent hover:bg-accent/90 text-white font-medium px-8 py-3 rounded-xl transition-all hover:shadow-[0_0_30px_rgba(var(--accent-rgb),0.3)] hover:scale-[1.02]"
                 >
                     Registrera din skola
                 </Link>
@@ -101,7 +101,7 @@ export default function SchoolsPage() {
                     </p>
                     <Link
                         to="/skapa-konto"
-                        className="inline-block bg-accent hover:bg-accent/90 text-white font-medium px-8 py-3 rounded-xl transition-all hover:shadow-[0_0_30px_rgba(255,77,0,0.3)] hover:scale-[1.02]"
+                        className="inline-block bg-accent hover:bg-accent/90 text-white font-medium px-8 py-3 rounded-xl transition-all hover:shadow-[0_0_30px_rgba(var(--accent-rgb),0.3)] hover:scale-[1.02]"
                     >
                         Kom igång gratis
                     </Link>

@@ -114,7 +114,7 @@ export default function VaraAnnonserPage() {
                 </div>
                 <Link
                     to="/skapa-annons"
-                    className="shrink-0 bg-accent hover:bg-accent/90 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all hover:shadow-[0_0_20px_rgba(255,77,0,0.3)]"
+                    className="shrink-0 bg-accent hover:bg-accent/90 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all hover:shadow-[0_0_20px_rgba(var(--accent-rgb),0.3)]"
                 >
                     + Ny annons
                 </Link>

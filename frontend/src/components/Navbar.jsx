@@ -123,7 +123,7 @@ export default function Navbar() {
                         {!userRole ? (
                             <>
                                 <Link to="/login" className="hidden text-sm font-medium transition-colors md:block text-text-muted hover:text-text-main">Logga in</Link>
-                                <Link to="/skapa-konto" className="bg-fg text-text-inverse hover:bg-accent hover:text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(255,77,0,0.4)]">
+                                <Link to="/skapa-konto" className="bg-fg text-text-inverse hover:bg-accent hover:text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(var(--accent-rgb),0.4)]">
                                     Skapa konto
                                 </Link>
                             </>

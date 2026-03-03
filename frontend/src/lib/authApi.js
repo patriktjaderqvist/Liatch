@@ -1,3 +1,5 @@
+import { setPortalThemeFromRole } from './portalTheme';
+
 function getFallbackApiBaseUrl() {
     if (typeof window === "undefined") {
         return "http://localhost:8000";
@@ -197,6 +199,7 @@ export function persistSession(accessToken, userType, user = null) {
     const role = mapUserTypeToRole(userType);
     if (role) {
         localStorage.setItem("userRole", role);
+        setPortalThemeFromRole(role);
     } else {
         localStorage.removeItem("userRole");
     }

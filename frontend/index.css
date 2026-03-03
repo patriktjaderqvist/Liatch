@@ -24,6 +24,16 @@
     --glass-card-hover: rgba(20, 20, 20, 0.9);
 
     --grain-opacity: 0.04;
+
+    --accent-rgb: 255 77 0;
+}
+
+[data-portal="company"] {
+    --accent-rgb: 59 130 246;
+}
+
+[data-portal="school"] {
+    --accent-rgb: 34 197 94;
 }
 
 [data-theme="light"] {
@@ -90,10 +100,10 @@ body {
 }
 
 .glass-card:hover {
-    border-color: #ff4d00;
+    border-color: rgb(var(--accent-rgb));
     background: var(--glass-card-hover);
     transform: translateY(-4px) scale(1.01);
-    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1), 0 0 30px rgba(255, 77, 0, 0.15);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1), 0 0 30px rgba(var(--accent-rgb), 0.15);
 }
 
 /* Typography */
@@ -152,5 +162,5 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #ff4d00;
+    background: rgb(var(--accent-rgb));
 }

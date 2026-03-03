@@ -1,6 +1,43 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { fetchJobAds } from '../lib/jobAdsApi';
+import { fetchMyStudent } from '../lib/studentApi';
+
+const PAGE_SIZE = 12;
+const GUEST_PREVIEW_COUNT = 3;
+
+const QUICK_FILTERS = [
+    {
+        id: 'stockholm',
+        label: 'Stockholm',
+        predicate: (ad) => (ad.location || '').toLowerCase().includes('stockholm'),
+    },
+    {
+        id: 'remote',
+        label: 'Distans',
+        predicate: (ad) => ad.remote,
+    },
+    {
+        id: 'frontend',
+        label: 'Frontend',
+        predicate: (ad) => `${ad.title} ${ad.description}`.toLowerCase().includes('frontend'),
+    },
+    {
+        id: 'backend',
+        label: 'Backend',
+        predicate: (ad) => `${ad.title} ${ad.description}`.toLowerCase().includes('backend'),
+    },
+    {
+        id: 'react',
+        label: 'React',
+        predicate: (ad) => `${ad.title} ${ad.description}`.toLowerCase().includes('react'),
+    },
+    {
+        id: 'fastapi',
+        label: 'FastAPI',
+        predicate: (ad) => `${ad.title} ${ad.description}`.toLowerCase().includes('fastapi'),
+    },
+];
 
 function formatDate(dateStr) {
     if (!dateStr) return null;
@@ -11,9 +48,9 @@ function formatDate(dateStr) {
     });
 }
 
-function AdCard({ ad }) {
+function AdCard({ ad, to }) {
     return (
-        <Link to={`/annonser/${ad.id}`} className="flex flex-col gap-3 p-6 transition-colors cursor-pointer glass-card rounded-2xl hover:border-accent/30">
+        <Link to={to} className="flex flex-col gap-3 p-6 transition-colors cursor-pointer glass-card rounded-2xl hover:border-accent/30">
             <div className="flex items-start justify-between gap-4">
                 <h2 className="text-lg font-bold leading-snug text-text-main">{ad.title}</h2>
                 {ad.remote && (
@@ -60,38 +97,235 @@ function AdCard({ ad }) {
     );
 }
 
+function buildRecommendedFilters(student) {
+    const recommended = [];
+    const profileCity = (student?.profile?.city || '').trim();
+    if (profileCity) {
+        recommended.push({
+            id: `city:${profileCity.toLowerCase()}`,
+            label: `Nära dig: ${profileCity}`,
+            predicate: (ad) => (ad.location || '').toLowerCase().includes(profileCity.toLowerCase()),
+        });
+    }
+
+    const program = (student?.program || '').toLowerCase();
+    if (program.includes('front')) {
+        recommended.push({
+            id: 'program:frontend',
+            label: 'Rek: Frontend',
+            predicate: (ad) => `${ad.title} ${ad.description}`.toLowerCase().includes('frontend'),
+        });
+    }
+    if (program.includes('back')) {
+        recommended.push({
+            id: 'program:backend',
+            label: 'Rek: Backend',
+            predicate: (ad) => `${ad.title} ${ad.description}`.toLowerCase().includes('backend'),
+        });
+    }
+    if (program.includes('fullstack')) {
+        recommended.push({
+            id: 'program:fullstack',
+            label: 'Rek: Fullstack',
+            predicate: (ad) => `${ad.title} ${ad.description}`.toLowerCase().includes('fullstack'),
+        });
+    }
+
+    return recommended;
+}
+
 export default function AdsPage() {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [ads, setAds] = useState([]);
-    const [filtered, setFiltered] = useState([]);
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = useState(searchParams.get('q') || '');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+
+    const [isLoggedIn, setIsLoggedIn] = useState(Boolean(localStorage.getItem('accessToken')));
+    const [userRole, setUserRole] = useState(localStorage.getItem('userRole'));
+    const [recommendedFilters, setRecommendedFilters] = useState([]);
+
+    const [selectedLocation, setSelectedLocation] = useState('all');
+    const [selectedWorkMode, setSelectedWorkMode] = useState('all');
+    const [selectedEmploymentType, setSelectedEmploymentType] = useState('all');
+    const [sortBy, setSortBy] = useState('newest');
+    const [activeQuickFilter, setActiveQuickFilter] = useState('all');
+
+    const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => {
         fetchJobAds()
             .then((data) => {
                 setAds(data);
-                setFiltered(data);
             })
             .catch((err) => setError(err.message))
             .finally(() => setIsLoading(false));
     }, []);
 
     useEffect(() => {
-        const q = search.toLowerCase().trim();
-        if (!q) {
-            setFiltered(ads);
-            return;
+        const syncSession = () => {
+            setIsLoggedIn(Boolean(localStorage.getItem('accessToken')));
+            setUserRole(localStorage.getItem('userRole'));
+        };
+
+        syncSession();
+        window.addEventListener('storage', syncSession);
+        window.addEventListener('userRoleChanged', syncSession);
+
+        return () => {
+            window.removeEventListener('storage', syncSession);
+            window.removeEventListener('userRoleChanged', syncSession);
+        };
+    }, []);
+
+    useEffect(() => {
+        const loadRecommendations = async () => {
+            if (!isLoggedIn || userRole !== 'privatperson') {
+                setRecommendedFilters([]);
+                return;
+            }
+
+            const accessToken = localStorage.getItem('accessToken');
+            if (!accessToken) {
+                setRecommendedFilters([]);
+                return;
+            }
+
+            try {
+                const student = await fetchMyStudent(accessToken);
+                setRecommendedFilters(buildRecommendedFilters(student));
+            } catch {
+                setRecommendedFilters([]);
+            }
+        };
+
+        loadRecommendations();
+    }, [isLoggedIn, userRole]);
+
+    useEffect(() => {
+        const query = searchParams.get('q') || '';
+        setSearch(query);
+    }, [searchParams]);
+
+    const locations = useMemo(() => {
+        return [...new Set(ads.map((ad) => ad.location).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'sv-SE'));
+    }, [ads]);
+
+    const employmentTypes = useMemo(() => {
+        return [...new Set(ads.map((ad) => ad.employment_type).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'sv-SE'));
+    }, [ads]);
+
+    const allQuickFilters = useMemo(() => {
+        const merged = [...recommendedFilters, ...QUICK_FILTERS];
+        const uniqueById = new Map();
+        for (const filter of merged) {
+            if (!uniqueById.has(filter.id)) {
+                uniqueById.set(filter.id, filter);
+            }
         }
-        setFiltered(
-            ads.filter(
-                (ad) =>
-                    ad.title.toLowerCase().includes(q) ||
-                    ad.company.name.toLowerCase().includes(q) ||
-                    (ad.location && ad.location.toLowerCase().includes(q))
-            )
-        );
-    }, [search, ads]);
+        return [...uniqueById.values()];
+    }, [recommendedFilters]);
+
+    const filteredAndSortedAds = useMemo(() => {
+        let result = [...ads];
+
+        const q = search.toLowerCase().trim();
+        if (q) {
+            result = result.filter((ad) =>
+                ad.title.toLowerCase().includes(q) ||
+                ad.company.name.toLowerCase().includes(q) ||
+                (ad.location && ad.location.toLowerCase().includes(q)) ||
+                ad.description.toLowerCase().includes(q)
+            );
+        }
+
+        if (selectedLocation !== 'all') {
+            result = result.filter((ad) => ad.location === selectedLocation);
+        }
+
+        if (selectedWorkMode === 'remote') {
+            result = result.filter((ad) => ad.remote);
+        }
+        if (selectedWorkMode === 'onsite') {
+            result = result.filter((ad) => !ad.remote);
+        }
+
+        if (selectedEmploymentType !== 'all') {
+            result = result.filter((ad) => ad.employment_type === selectedEmploymentType);
+        }
+
+        if (activeQuickFilter !== 'all') {
+            const quickFilter = allQuickFilters.find((filter) => filter.id === activeQuickFilter);
+            if (quickFilter) {
+                result = result.filter((ad) => quickFilter.predicate(ad));
+            }
+        }
+
+        if (sortBy === 'deadline') {
+            result.sort((a, b) => {
+                if (!a.application_deadline && !b.application_deadline) return 0;
+                if (!a.application_deadline) return 1;
+                if (!b.application_deadline) return -1;
+                return new Date(a.application_deadline) - new Date(b.application_deadline);
+            });
+        } else if (sortBy === 'company') {
+            result.sort((a, b) => a.company.name.localeCompare(b.company.name, 'sv-SE'));
+        } else {
+            result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        }
+
+        return result;
+    }, [ads, search, selectedLocation, selectedWorkMode, selectedEmploymentType, activeQuickFilter, sortBy, allQuickFilters]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, selectedLocation, selectedWorkMode, selectedEmploymentType, activeQuickFilter, sortBy]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredAndSortedAds.length / PAGE_SIZE));
+
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
+
+    const pagedAds = useMemo(() => {
+        const start = (currentPage - 1) * PAGE_SIZE;
+        return filteredAndSortedAds.slice(start, start + PAGE_SIZE);
+    }, [filteredAndSortedAds, currentPage]);
+
+    const visibleAds = isLoggedIn ? pagedAds : filteredAndSortedAds.slice(0, GUEST_PREVIEW_COUNT);
+    const lockedAds = isLoggedIn ? [] : filteredAndSortedAds.slice(GUEST_PREVIEW_COUNT);
+    const hasLockedAds = lockedAds.length > 0;
+
+    const handleSearchChange = (event) => {
+        const nextValue = event.target.value;
+        setSearch(nextValue);
+
+        const nextParams = new URLSearchParams(searchParams);
+        const trimmedValue = nextValue.trim();
+        if (trimmedValue) {
+            nextParams.set('q', trimmedValue);
+        } else {
+            nextParams.delete('q');
+        }
+        setSearchParams(nextParams, { replace: true });
+    };
+
+    const clearFilters = () => {
+        setSelectedLocation('all');
+        setSelectedWorkMode('all');
+        setSelectedEmploymentType('all');
+        setSortBy('newest');
+        setActiveQuickFilter('all');
+    };
+
+    const getAdTarget = (adId) => {
+        if (isLoggedIn) {
+            return `/annonser/${adId}`;
+        }
+        return `/login?redirect=${encodeURIComponent(`/annonser/${adId}`)}`;
+    };
 
     return (
         <div className="px-6 pt-32 pb-20 mx-auto max-w-7xl">
@@ -100,8 +334,7 @@ export default function AdsPage() {
                 <p className="text-text-muted">Hitta din nästa LIA-plats bland aktiva annonser.</p>
             </div>
 
-            {/* Sökfält */}
-            <div className="max-w-lg mb-8">
+            <div className="grid gap-4 mb-8 lg:grid-cols-[1.2fr_0.8fr]">
                 <div className="relative">
                     <div className="absolute inset-y-0 flex items-center pointer-events-none left-4">
                         <svg className="w-4 h-4 text-text-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,36 +344,193 @@ export default function AdsPage() {
                     <input
                         type="text"
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Sök på titel, företag eller stad..."
+                        onChange={handleSearchChange}
+                        placeholder="Sök på titel, företag, teknik eller stad..."
                         className="w-full py-3 pl-10 pr-4 transition-all border rounded-xl bg-fg/5 border-fg/10 text-text-main placeholder-text-dim focus:outline-none focus:border-accent/50 focus:bg-fg/10"
                     />
                 </div>
+
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+                    <select
+                        value={selectedLocation}
+                        onChange={(event) => setSelectedLocation(event.target.value)}
+                        className="px-3 py-3 text-sm border rounded-xl bg-fg/5 border-fg/10 text-text-main focus:outline-none focus:border-accent/40"
+                    >
+                        <option value="all">Alla orter</option>
+                        {locations.map((location) => (
+                            <option key={location} value={location}>{location}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={selectedWorkMode}
+                        onChange={(event) => setSelectedWorkMode(event.target.value)}
+                        className="px-3 py-3 text-sm border rounded-xl bg-fg/5 border-fg/10 text-text-main focus:outline-none focus:border-accent/40"
+                    >
+                        <option value="all">Alla upplägg</option>
+                        <option value="remote">Distans</option>
+                        <option value="onsite">På plats</option>
+                    </select>
+
+                    <select
+                        value={selectedEmploymentType}
+                        onChange={(event) => setSelectedEmploymentType(event.target.value)}
+                        className="px-3 py-3 text-sm border rounded-xl bg-fg/5 border-fg/10 text-text-main focus:outline-none focus:border-accent/40"
+                    >
+                        <option value="all">Alla typer</option>
+                        {employmentTypes.map((type) => (
+                            <option key={type} value={type}>{type}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={sortBy}
+                        onChange={(event) => setSortBy(event.target.value)}
+                        className="px-3 py-3 text-sm border rounded-xl bg-fg/5 border-fg/10 text-text-main focus:outline-none focus:border-accent/40"
+                    >
+                        <option value="newest">Nyast först</option>
+                        <option value="deadline">Snarast deadline</option>
+                        <option value="company">Företag A-Ö</option>
+                    </select>
+                </div>
             </div>
 
-            {/* Innehåll */}
-            {isLoading && (
-                <p className="text-text-muted">Laddar annonser...</p>
+            {allQuickFilters.length > 0 && (
+                <div className="mb-8">
+                    {recommendedFilters.length > 0 && (
+                        <p className="mb-2 text-xs font-semibold tracking-[0.12em] uppercase text-text-dim">Rekommenderat för dig</p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setActiveQuickFilter('all')}
+                            className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${activeQuickFilter === 'all'
+                                ? 'border-accent/40 bg-accent/15 text-accent'
+                                : 'border-fg/10 bg-fg/5 text-text-muted hover:border-accent/30 hover:text-text-main'
+                                }`}
+                        >
+                            Alla
+                        </button>
+                        {allQuickFilters.map((filter) => (
+                            <button
+                                key={filter.id}
+                                type="button"
+                                onClick={() => setActiveQuickFilter(filter.id)}
+                                className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${activeQuickFilter === filter.id
+                                    ? 'border-accent/40 bg-accent/15 text-accent'
+                                    : 'border-fg/10 bg-fg/5 text-text-muted hover:border-accent/30 hover:text-text-main'
+                                    }`}
+                            >
+                                {filter.label}
+                            </button>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={clearFilters}
+                            className="px-3 py-1.5 text-xs rounded-full border border-fg/10 bg-fg/5 text-text-dim hover:text-text-main"
+                        >
+                            Nollställ filter
+                        </button>
+                    </div>
+                </div>
             )}
 
-            {error && (
-                <p className="text-sm text-red-400">{error}</p>
-            )}
+            {isLoading && <p className="text-text-muted">Laddar annonser...</p>}
 
-            {!isLoading && !error && filtered.length === 0 && (
+            {error && <p className="text-sm text-red-400">{error}</p>}
+
+            {!isLoading && !error && filteredAndSortedAds.length === 0 && (
                 <p className="text-text-muted">
                     {search ? 'Inga annonser matchar din sökning.' : 'Det finns inga aktiva annonser just nu.'}
                 </p>
             )}
 
-            {!isLoading && !error && filtered.length > 0 && (
+            {!isLoading && !error && filteredAndSortedAds.length > 0 && (
                 <>
-                    <p className="mb-4 text-xs text-text-dim">{filtered.length} annons{filtered.length !== 1 ? 'er' : ''}</p>
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4 text-xs text-text-dim">
+                        <p>{filteredAndSortedAds.length} annons{filteredAndSortedAds.length !== 1 ? 'er' : ''}</p>
+                        {isLoggedIn && totalPages > 1 && (
+                            <p>Sida {currentPage} av {totalPages}</p>
+                        )}
+                    </div>
+
                     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-                        {filtered.map((ad) => (
-                            <AdCard key={ad.id} ad={ad} />
+                        {visibleAds.map((ad) => (
+                            <AdCard key={ad.id} ad={ad} to={getAdTarget(ad.id)} />
                         ))}
                     </div>
+
+                    {!isLoggedIn && hasLockedAds && (
+                        <div className="mt-8">
+                            <div className="relative z-20 max-w-xl px-5 py-5 mx-auto mb-[-28px] text-center border rounded-2xl border-accent/25 bg-bg-void/85 backdrop-blur-md">
+                                <p className="text-sm text-text-main">Logga in om du vill se fler annonser.</p>
+                                <div className="flex flex-wrap justify-center gap-3 mt-4">
+                                    <Link
+                                        to="/login?redirect=%2Fannonser"
+                                        className="px-4 py-2 text-sm font-bold text-white transition-colors rounded-lg bg-accent hover:bg-accent/90"
+                                    >
+                                        Logga in
+                                    </Link>
+                                    <Link
+                                        to="/skapa-konto?redirect=%2Fannonser"
+                                        className="px-4 py-2 text-sm font-semibold transition-colors border rounded-lg border-fg/15 text-text-main hover:border-accent/40 hover:text-accent"
+                                    >
+                                        Skapa konto
+                                    </Link>
+                                </div>
+                            </div>
+
+                            <div className="relative overflow-hidden border rounded-2xl border-accent/20 bg-bg-elevated/30 pt-10">
+                                <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-b from-bg-void/60 via-bg-void/40 to-bg-void/15"></div>
+
+                                <div className="grid grid-cols-1 gap-5 p-5 md:grid-cols-2 lg:grid-cols-3">
+                                    {lockedAds.map((ad) => (
+                                        <div key={ad.id} className="relative pointer-events-none select-none">
+                                            <div className="blur-[3px] opacity-80">
+                                                <AdCard ad={ad} to={`/annonser/${ad.id}`} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {isLoggedIn && totalPages > 1 && (
+                        <div className="flex flex-wrap items-center justify-center gap-2 mt-8">
+                            <button
+                                type="button"
+                                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                disabled={currentPage === 1}
+                                className="px-3 py-2 text-sm border rounded-lg border-fg/10 bg-fg/5 text-text-main disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Föregående
+                            </button>
+
+                            {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                                <button
+                                    key={page}
+                                    type="button"
+                                    onClick={() => setCurrentPage(page)}
+                                    className={`min-w-[36px] px-3 py-2 text-sm rounded-lg border ${currentPage === page
+                                        ? 'border-accent/40 bg-accent/15 text-accent'
+                                        : 'border-fg/10 bg-fg/5 text-text-main'
+                                        }`}
+                                >
+                                    {page}
+                                </button>
+                            ))}
+
+                            <button
+                                type="button"
+                                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-2 text-sm border rounded-lg border-fg/10 bg-fg/5 text-text-main disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Nästa
+                            </button>
+                        </div>
+                    )}
                 </>
             )}
         </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { createRegisterPayload, fetchCurrentUser, loginUser, persistSession, registerUser } from '../lib/authApi';
 
 export default function CreateAccountPage() {
@@ -12,6 +12,10 @@ export default function CreateAccountPage() {
     const [errorMessage, setErrorMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const redirectParam = new URLSearchParams(location.search).get('redirect');
+    const redirectTo = redirectParam && redirectParam.startsWith('/') ? redirectParam : '/';
 
     const getPlaceholderText = () => {
         switch (accountType) {
@@ -51,7 +55,7 @@ export default function CreateAccountPage() {
             const me = await fetchCurrentUser(loginResponse.access_token);
 
             persistSession(loginResponse.access_token, me.user_type, me);
-            navigate('/');
+            navigate(redirectTo);
         } catch (error) {
             setErrorMessage(error.message);
         } finally {

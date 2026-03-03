@@ -1,6 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Hero() {
+    const [search, setSearch] = useState('');
+    const navigate = useNavigate();
+
+    const handleSubmit = (event) => {
+        event.preventDefault();
+        const query = search.trim();
+        if (!query) {
+            return;
+        }
+        navigate(`/annonser?q=${encodeURIComponent(query)}`);
+    };
+
     return (
         <section className="min-h-screen relative flex items-center justify-center pt-20 overflow-hidden">
             {/* Ambient Background */}
@@ -27,19 +40,29 @@ export default function Hero() {
 
                 {/* Search Interface */}
                 <div className="max-w-3xl mx-auto glass p-2 rounded-2xl">
-                    <div className="flex flex-col md:flex-row gap-2">
+                    <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-2">
                         <div className="flex-1 relative group">
                             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                                 <svg className="h-5 w-5 text-text-muted group-focus-within:text-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
                             </div>
-                            <input type="text" className="w-full bg-fg/5 border border-fg/5 rounded-xl py-4 pl-12 pr-4 text-text-main placeholder-text-dim focus:outline-none focus:bg-fg/10 focus:border-accent/50 transition-all font-body" placeholder="Sök efter roll eller stad..." />
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                className="w-full bg-fg/5 border border-fg/5 rounded-xl py-4 pl-12 pr-4 text-text-main placeholder-text-dim focus:outline-none focus:bg-fg/10 focus:border-accent/50 transition-all font-body"
+                                placeholder="Sök efter roll eller stad..."
+                            />
                         </div>
-                        <button className="bg-accent hover:bg-accent/90 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 hover:shadow-[0_0_30px_rgba(255,77,0,0.3)] hover:scale-[1.02]">
+                        <button
+                            type="submit"
+                            disabled={!search.trim()}
+                            className="bg-accent hover:bg-accent/90 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 hover:shadow-[0_0_30px_rgba(255,77,0,0.3)] hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
+                        >
                             Hitta Plats
                         </button>
-                    </div>
+                    </form>
                 </div>
 
                 {/* Stats Ticker */}

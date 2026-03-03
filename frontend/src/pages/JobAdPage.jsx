@@ -18,6 +18,7 @@ export default function JobAdPage() {
     const [ad, setAd] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
     const userRole = localStorage.getItem('userRole');
     const [coverLetter, setCoverLetter] = useState('');
@@ -67,6 +68,12 @@ export default function JobAdPage() {
             </div>
         );
     }
+
+    const isLongDescription = ad.description.length > 700;
+    const visibleDescription =
+        isLongDescription && !isDescriptionExpanded
+            ? `${ad.description.slice(0, 700).trimEnd()}...`
+            : ad.description;
 
     return (
         <div className="max-w-3xl px-6 pt-32 pb-20 mx-auto">
@@ -135,7 +142,16 @@ export default function JobAdPage() {
             {/* Beskrivning */}
             <div className="p-6 mb-8 glass-card rounded-xl">
                 <h2 className="mb-4 text-lg font-bold text-text-main">Om rollen</h2>
-                <p className="leading-relaxed whitespace-pre-wrap text-text-muted">{ad.description}</p>
+                <p className="leading-relaxed whitespace-pre-wrap text-text-muted">{visibleDescription}</p>
+                {isLongDescription && (
+                    <button
+                        type="button"
+                        onClick={() => setIsDescriptionExpanded((prev) => !prev)}
+                        className="mt-4 text-sm font-semibold text-accent hover:underline"
+                    >
+                        {isDescriptionExpanded ? 'Visa mindre' : 'Visa hela annonsen'}
+                    </button>
+                )}
             </div>
 
             {/* Sök tjänsten – bara för studenter */}

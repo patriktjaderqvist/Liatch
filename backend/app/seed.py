@@ -471,9 +471,89 @@ def seed() -> SeedStats:
             )
             stats.ads_created += int(created)
 
+            ad_uiux, created = _upsert_job_ad(
+                db,
+                company_id=company_datacraft.id,
+                title="LIA UX/UI Designer",
+                description="Design and validate modern interfaces with product and frontend teams.",
+                location="Stockholm",
+                employment_type="LIA",
+                remote=True,
+                starts_at=now + timedelta(days=32),
+                ends_at=now + timedelta(days=122),
+                application_deadline=now + timedelta(days=21),
+                is_active=True,
+            )
+            stats.ads_created += int(created)
+
+            ad_data, created = _upsert_job_ad(
+                db,
+                company_id=company_nordic.id,
+                title="LIA Data Analyst Intern",
+                description="Support analytics, dashboarding and SQL reporting for customer teams.",
+                location="Stockholm",
+                employment_type="LIA",
+                remote=False,
+                starts_at=now + timedelta(days=38),
+                ends_at=now + timedelta(days=128),
+                application_deadline=now + timedelta(days=26),
+                is_active=True,
+            )
+            stats.ads_created += int(created)
+
+            ad_devops, created = _upsert_job_ad(
+                db,
+                company_id=company_nordic.id,
+                title="LIA DevOps Engineer",
+                description="Work with CI/CD pipelines, cloud environments and deployment automation.",
+                location="Stockholm",
+                employment_type="LIA",
+                remote=True,
+                starts_at=now + timedelta(days=41),
+                ends_at=now + timedelta(days=131),
+                application_deadline=now + timedelta(days=29),
+                is_active=True,
+            )
+            stats.ads_created += int(created)
+
+            ad_mobile, created = _upsert_job_ad(
+                db,
+                company_id=company_datacraft.id,
+                title="LIA Mobile App Developer",
+                description="Build cross-platform app features and collaborate closely with backend APIs.",
+                location="Stockholm",
+                employment_type="LIA",
+                remote=True,
+                starts_at=now + timedelta(days=45),
+                ends_at=now + timedelta(days=135),
+                application_deadline=now + timedelta(days=31),
+                is_active=True,
+            )
+            stats.ads_created += int(created)
+
+            ad_qa, created = _upsert_job_ad(
+                db,
+                company_id=company_nordic.id,
+                title="LIA QA Automation Engineer",
+                description="Create API and UI test suites to improve release quality and speed.",
+                location="Gothenburg",
+                employment_type="LIA",
+                remote=False,
+                starts_at=now + timedelta(days=47),
+                ends_at=now + timedelta(days=137),
+                application_deadline=now + timedelta(days=34),
+                is_active=True,
+            )
+            stats.ads_created += int(created)
+
             _sync_job_ad_tags(ad_frontend, [tags["react"], tags["ux"], tags["sql"]])
             _sync_job_ad_tags(ad_backend, [tags["python"], tags["fastapi"], tags["sql"]])
             _sync_job_ad_tags(ad_fullstack, [tags["react"], tags["python"], tags["devops"]])
+            _sync_job_ad_tags(ad_uiux, [tags["ux"], tags["react"]])
+            _sync_job_ad_tags(ad_data, [tags["sql"], tags["python"]])
+            _sync_job_ad_tags(ad_devops, [tags["devops"], tags["python"]])
+            _sync_job_ad_tags(ad_mobile, [tags["react"], tags["ux"]])
+            _sync_job_ad_tags(ad_qa, [tags["python"], tags["sql"]])
 
             _, created = _upsert_application(
                 db,

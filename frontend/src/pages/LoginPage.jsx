@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchCurrentUser, loginUser, persistSession } from '../lib/authApi';
 
 export default function LoginPage() {
@@ -9,6 +9,10 @@ export default function LoginPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const redirectParam = new URLSearchParams(location.search).get('redirect');
+    const redirectTo = redirectParam && redirectParam.startsWith('/') ? redirectParam : '/';
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -20,7 +24,7 @@ export default function LoginPage() {
             const me = await fetchCurrentUser(loginResponse.access_token);
 
             persistSession(loginResponse.access_token, me.user_type, me);
-            navigate('/');
+            navigate(redirectTo);
         } catch (error) {
             setErrorMessage(error.message);
         } finally {

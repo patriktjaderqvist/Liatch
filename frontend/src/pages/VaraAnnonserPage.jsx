@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+
 import { deleteJobAd, fetchMyJobAds } from '../lib/jobAdsApi';
 
 function formatDate(dateStr) {
@@ -56,6 +57,12 @@ function AdRow({ ad, onDelete }) {
             </div>
 
             <div className="flex gap-2 shrink-0">
+                <Link
+                    to={`/vara-annonser/${ad.id}/ansokningar`}
+                    className="px-4 py-2 text-sm font-medium transition-all border rounded-lg text-text-muted hover:text-text-main border-fg/10 hover:border-fg/20"
+                >
+                    Se ansökningar
+                </Link>
                 <button
                     onClick={() => navigate(`/redigera-annons/${ad.id}`)}
                     className="px-4 py-2 text-sm font-medium transition-all border rounded-lg text-text-muted hover:text-text-main border-fg/10 hover:border-fg/20"
@@ -114,7 +121,7 @@ export default function VaraAnnonserPage() {
                 </div>
                 <Link
                     to="/skapa-annons"
-                    className="shrink-0 bg-accent hover:bg-accent/90 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all hover:shadow-[0_0_20px_rgba(var(--accent-rgb),0.3)]"
+                    className="shrink-0 bg-accent hover:bg-accent/90 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all hover:shadow-[0_0_20px_rgba(255,77,0,0.3)]"
                 >
                     + Ny annons
                 </Link>

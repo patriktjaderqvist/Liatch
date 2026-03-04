@@ -61,3 +61,29 @@ export async function withdrawApplication(id, accessToken) {
         'Kunde inte återta ansökan.'
     );
 }
+
+export async function fetchJobAdApplications(jobAdId, accessToken) {
+    return requestJson(
+        `${apiBaseUrl}/api/v1/applications/job-ad/${jobAdId}`,
+        {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${accessToken}` },
+        },
+        'Kunde inte hämta ansökningarna.'
+    );
+}
+
+export async function updateApplicationStatus(applicationId, newStatus, accessToken) {
+    return requestJson(
+        `${apiBaseUrl}/api/v1/applications/${applicationId}/status`,
+        {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ status: newStatus }),
+        },
+        'Kunde inte uppdatera statusen.'
+    );
+}

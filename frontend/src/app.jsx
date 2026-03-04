@@ -21,7 +21,9 @@ import SkapaAnnonsPage from './pages/SkapaAnnonsPage';
 import RedigeraAnnonsPage from './pages/RedigeraAnnonsPage';
 import JobAdPage from './pages/JobAdPage';
 import ForetagsprofilPage from './pages/ForetagsprofilPage';
+import AnsokningarPage from './pages/AnsokningarPage';
 import StudenterPage from './pages/StudenterPage';
+import StudentPublicPage from './pages/StudentPublicPage';
 import SkolprofilPage from './pages/SkolprofilPage';
 
 function App() {
@@ -48,8 +50,10 @@ function App() {
                     <Route path="/vara-annonser" element={<VaraAnnonserPage />} />
                     <Route path="/skapa-annons" element={<SkapaAnnonsPage />} />
                     <Route path="/redigera-annons/:id" element={<RedigeraAnnonsPage />} />
+                    <Route path="/vara-annonser/:id/ansokningar" element={<AnsokningarPage />} />
                     <Route path="/foretagsprofil" element={<ForetagsprofilPage />} />
                     <Route path="/studenter" element={<StudenterPage />} />
+                    <Route path="/studenter/:id" element={<StudentPublicPage />} />
                     <Route path="/skolprofil" element={<SkolprofilPage />} />
                 </Routes>
             </main>

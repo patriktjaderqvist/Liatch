@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { fetchJobAd } from '../lib/jobAdsApi';
-import { createApplication } from '../lib/applicationsApi';
+import { createApplication, fetchMyApplications } from '../lib/applicationsApi';
 
 function formatDate(dateStr) {
     if (!dateStr) return null;
@@ -10,6 +10,23 @@ function formatDate(dateStr) {
         month: 'long',
         day: 'numeric',
     });
+}
+
+const STATUS_CONFIG = {
+    submitted: { label: 'Inskickad', className: 'bg-fg/5 text-text-dim border-fg/10' },
+    under_review: { label: 'Under granskning', className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
+    accepted: { label: 'Accepterad', className: 'bg-green-500/10 text-green-400 border-green-500/20' },
+    rejected: { label: 'Avvisad', className: 'bg-red-500/10 text-red-400 border-red-500/20' },
+    withdrawn: { label: 'Återtagen', className: 'bg-fg/5 text-text-dim border-fg/10' },
+};
+
+function StatusBadge({ status }) {
+    const config = STATUS_CONFIG[status] ?? { label: status, className: 'bg-fg/5 text-text-dim border-fg/10' };
+    return (
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${config.className}`}>
+            {config.label}
+        </span>
+    );
 }
 
 export default function JobAdPage() {
@@ -21,14 +38,27 @@ export default function JobAdPage() {
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
     const userRole = localStorage.getItem('userRole');
+    const [myApplication, setMyApplication] = useState(null);
     const [coverLetter, setCoverLetter] = useState('');
     const [isApplying, setIsApplying] = useState(false);
     const [applyError, setApplyError] = useState('');
-    const [applySuccess, setApplySuccess] = useState(false);
 
     useEffect(() => {
-        fetchJobAd(id)
-            .then(setAd)
+        const accessToken = localStorage.getItem('accessToken');
+        const jobAdPromise = fetchJobAd(id);
+        const appsPromise =
+            userRole === 'privatperson' && accessToken
+                ? fetchMyApplications(accessToken).catch(() => [])
+                : Promise.resolve([]);
+
+        Promise.all([jobAdPromise, appsPromise])
+            .then(([adData, apps]) => {
+                setAd(adData);
+                const existing = apps.find(
+                    (a) => a.job_ad_id === Number(id) && a.status !== 'withdrawn'
+                );
+                setMyApplication(existing || null);
+            })
             .catch((err) => setError(err.message))
             .finally(() => setIsLoading(false));
     }, [id]);
@@ -38,8 +68,8 @@ export default function JobAdPage() {
         setIsApplying(true);
         const accessToken = localStorage.getItem('accessToken');
         try {
-            await createApplication(Number(id), coverLetter, accessToken);
-            setApplySuccess(true);
+            const application = await createApplication(Number(id), coverLetter, accessToken);
+            setMyApplication(application);
         } catch (err) {
             setApplyError(err.message);
         } finally {
@@ -154,8 +184,37 @@ export default function JobAdPage() {
                 )}
             </div>
 
-            {/* Sök tjänsten – bara för studenter */}
-            {userRole === 'privatperson' && !applySuccess && (
+            {/* Student: läsbar ansökningsvy om redan sökt */}
+            {userRole === 'privatperson' && myApplication && (
+                <div className="p-6 mb-8 glass-card rounded-xl">
+                    <div className="flex items-center gap-3 mb-4">
+                        <h2 className="text-lg font-bold text-text-main">Din ansökan</h2>
+                        <StatusBadge status={myApplication.status} />
+                    </div>
+                    <p className="mb-4 text-xs text-text-dim">
+                        Skickad {formatDate(myApplication.created_at)}
+                    </p>
+                    {myApplication.cover_letter ? (
+                        <div>
+                            <p className="mb-1 text-sm font-medium text-text-main">Personligt brev</p>
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap text-text-muted">
+                                {myApplication.cover_letter}
+                            </p>
+                        </div>
+                    ) : (
+                        <p className="text-sm italic text-text-dim">Inget personligt brev skickat.</p>
+                    )}
+                    <p className="mt-4 text-xs text-text-dim">
+                        Följ statusen under{' '}
+                        <Link to="/mina-sokningar" className="text-accent hover:underline">
+                            Mina ansökningar
+                        </Link>.
+                    </p>
+                </div>
+            )}
+
+            {/* Student: sök-formulär om inte sökt (eller återtagen) */}
+            {userRole === 'privatperson' && !myApplication && (
                 <div className="p-6 mb-8 glass-card rounded-xl">
                     <h2 className="mb-1 text-lg font-bold text-text-main">Sök tjänsten</h2>
                     <p className="mb-4 text-sm text-text-dim">Skicka din ansökan direkt till {ad.company?.name}.</p>
@@ -179,18 +238,6 @@ export default function JobAdPage() {
                     >
                         {isApplying ? 'Skickar...' : 'Skicka ansökan'}
                     </button>
-                </div>
-            )}
-
-            {applySuccess && (
-                <div className="p-6 mb-8 border glass-card rounded-xl border-green-500/20 bg-green-500/5">
-                    <p className="font-medium text-green-400">Ansökan skickad!</p>
-                    <p className="mt-1 text-sm text-text-dim">
-                        Du kan följa statusen under{' '}
-                        <Link to="/mina-sokningar" className="text-accent hover:underline">
-                            Mina ansökningar
-                        </Link>.
-                    </p>
                 </div>
             )}
         </div>

@@ -65,3 +65,14 @@ export async function updateMyProfile(payload, accessToken) {
         'Kunde inte uppdatera profilen.'
     );
 }
+
+export async function fetchStudent(studentId, accessToken) {
+    return requestJson(
+        `${apiBaseUrl}/api/v1/students/${studentId}`,
+        {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${accessToken}` },
+        },
+        'Kunde inte hämta studentprofilen.'
+    );
+}

@@ -180,6 +180,41 @@ class ApplicationOutSchema(BaseModel):
     created_at: datetime
 
 
+class StudentBriefSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    first_name: str
+    last_name: str
+    program: str | None
+
+
+class ApplicationForCompanySchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    student_id: int
+    student: StudentBriefSchema
+    job_ad_id: int
+    status: str
+    cover_letter: str | None
+    created_at: datetime
+
+
+class ApplicationStatusUpdateSchema(BaseModel):
+    status: str
+
+
+class StudentPublicSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    first_name: str
+    last_name: str
+    program: str | None
+    profile: StudentProfileOutSchema | None
+
+
 class CompanyOutSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

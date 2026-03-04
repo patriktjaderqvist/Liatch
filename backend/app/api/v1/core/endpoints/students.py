@@ -7,6 +7,7 @@ from app.api.v1.core.schemas import (
     StudentOutSchema,
     StudentProfileOutSchema,
     StudentProfileUpdateSchema,
+    StudentPublicSchema,
     StudentUpdateSchema,
 )
 from app.db_setup import get_db
@@ -107,3 +108,22 @@ def update_my_profile(
     db.commit()
     db.refresh(profile)
     return profile
+
+
+@router.get("/{student_id}", response_model=StudentPublicSchema)
+def get_student(
+    student_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    student = db.scalars(
+        select(Student)
+        .where(Student.id == student_id)
+        .options(selectinload(Student.profile))
+    ).first()
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Studenten hittades inte.",
+        )
+    return student

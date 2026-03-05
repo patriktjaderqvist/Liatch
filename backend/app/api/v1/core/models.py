@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
+from uuid import uuid4
 
 from sqlalchemy import DateTime, Enum as SqlEnum, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -76,6 +77,13 @@ class Student(TimestampMixin, Base):
 
     first_name: Mapped[str] = mapped_column(String(120), nullable=False)
     last_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    public_id: Mapped[str] = mapped_column(
+        String(36),
+        unique=True,
+        nullable=False,
+        index=True,
+        default=lambda: str(uuid4()),
+    )
     personal_number: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True)
     program: Mapped[str | None] = mapped_column(String(150), nullable=True)
     school_id: Mapped[int | None] = mapped_column(

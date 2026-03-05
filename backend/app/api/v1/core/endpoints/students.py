@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.api.v1.core.models import Student, StudentProfile, User
 from app.api.v1.core.schemas import (
+    StudentPublicOutSchema,
     StudentOutSchema,
     StudentProfileOutSchema,
     StudentProfileUpdateSchema,
@@ -34,12 +35,34 @@ def get_my_student(
     student = db.scalars(
         select(Student)
         .where(Student.id == student_id)
-        .options(selectinload(Student.profile))
+        .options(selectinload(Student.profile), selectinload(Student.school))
     ).first()
     if not student:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Studentpost hittades inte.",
+        )
+    return student
+
+
+@router.get("/public/{public_id}", response_model=StudentPublicOutSchema)
+def get_student_by_public_id(
+    public_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # Requires auth to avoid exposing student profiles anonymously.
+    _ = current_user
+
+    student = db.scalars(
+        select(Student)
+        .where(Student.public_id == public_id)
+        .options(selectinload(Student.profile), selectinload(Student.school))
+    ).first()
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student hittades inte.",
         )
     return student
 
@@ -54,7 +77,7 @@ def update_my_student(
     student = db.scalars(
         select(Student)
         .where(Student.id == student_id)
-        .options(selectinload(Student.profile))
+        .options(selectinload(Student.profile), selectinload(Student.school))
     ).first()
     if not student:
         raise HTTPException(
@@ -71,7 +94,7 @@ def update_my_student(
     student = db.scalars(
         select(Student)
         .where(Student.id == student_id)
-        .options(selectinload(Student.profile))
+        .options(selectinload(Student.profile), selectinload(Student.school))
     ).first()
     return student
 

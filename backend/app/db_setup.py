@@ -3,6 +3,7 @@ from app.settings import settings
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.orm import Session
+from uuid import uuid4
 
 # echo = True to see the SQL queries
 engine = create_engine(f"{settings.DB_URL}", echo=True)
@@ -25,6 +26,7 @@ def _apply_sqlite_bootstrap_migrations(db_engine: Engine) -> None:
             _migrate_legacy_companies_table(connection, inspector)
         if "students" in table_names:
             _migrate_students_school_id_nullable(connection)
+            _migrate_students_public_id(connection)
 
 
 def _migrate_legacy_companies_table(connection: Connection, inspector) -> None:
@@ -109,6 +111,26 @@ def _migrate_students_school_id_nullable(connection: Connection) -> None:
         connection.execute(text("CREATE INDEX ix_students_school_id ON students (school_id)"))
     finally:
         connection.execute(text("PRAGMA foreign_keys=ON"))
+
+
+def _migrate_students_public_id(connection: Connection) -> None:
+    if not _sqlite_column_exists(connection, "students", "public_id"):
+        connection.execute(text("ALTER TABLE students ADD COLUMN public_id VARCHAR(36)"))
+
+    student_rows = connection.execute(
+        text("SELECT id FROM students WHERE public_id IS NULL OR TRIM(public_id) = ''")
+    ).fetchall()
+
+    for row in student_rows:
+        connection.execute(
+            text("UPDATE students SET public_id = :public_id WHERE id = :id"),
+            {"public_id": str(uuid4()), "id": row[0]},
+        )
+
+    if not _sqlite_index_exists(connection, "ix_students_public_id"):
+        connection.execute(
+            text("CREATE UNIQUE INDEX ix_students_public_id ON students (public_id)")
+        )
 
 
 def _create_sqlite_unique_indexes_if_possible(connection: Connection) -> None:

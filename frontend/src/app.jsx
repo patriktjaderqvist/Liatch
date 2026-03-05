@@ -25,6 +25,7 @@ import AnsokningarPage from './pages/AnsokningarPage';
 import StudenterPage from './pages/StudenterPage';
 import StudentPublicPage from './pages/StudentPublicPage';
 import SkolprofilPage from './pages/SkolprofilPage';
+import StudentPublicProfilePage from './pages/StudentPublicProfilePage';
 
 function App() {
     return (
@@ -55,6 +56,7 @@ function App() {
                     <Route path="/studenter" element={<StudenterPage />} />
                     <Route path="/studenter/:id" element={<StudentPublicPage />} />
                     <Route path="/skolprofil" element={<SkolprofilPage />} />
+                    <Route path="/student/:publicId" element={<StudentPublicProfilePage />} />
                 </Routes>
             </main>
             <Footer />

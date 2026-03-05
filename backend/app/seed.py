@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from uuid import NAMESPACE_DNS, uuid4, uuid5
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -37,6 +38,12 @@ class SeedStats:
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _build_student_public_id(seed_value: str | None) -> str:
+    if seed_value:
+        return str(uuid5(NAMESPACE_DNS, f"liatch-student:{seed_value}"))
+    return str(uuid4())
 
 
 def _upsert_school(
@@ -125,13 +132,20 @@ def _upsert_student(
     created = student is None
 
     if created:
-        student = Student(personal_number=personal_number, first_name=first_name, last_name=last_name)
+        student = Student(
+            public_id=_build_student_public_id(personal_number),
+            personal_number=personal_number,
+            first_name=first_name,
+            last_name=last_name,
+        )
         db.add(student)
 
     student.first_name = first_name
     student.last_name = last_name
     student.program = program
     student.school_id = school_id
+    if not student.public_id:
+        student.public_id = _build_student_public_id(personal_number)
     db.flush()
     return student, created
 

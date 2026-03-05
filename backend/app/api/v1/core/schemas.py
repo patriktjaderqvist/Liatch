@@ -66,6 +66,15 @@ class CompanyBriefSchema(BaseModel):
     website: str | None
 
 
+class SchoolBriefSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    city: str | None
+    website: str | None
+
+
 class JobAdBriefSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -137,14 +146,39 @@ class StudentOutSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    public_id: str
     first_name: str
     last_name: str
     personal_number: str | None
     program: str | None
     school_id: int | None
+    school: SchoolBriefSchema | None
     profile: StudentProfileOutSchema | None
     created_at: datetime
     updated_at: datetime
+
+
+class StudentPublicProfileOutSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    headline: str | None
+    bio: str | None
+    city: str | None
+    linkedin_url: str | None
+    github_url: str | None
+    portfolio_url: str | None
+    cv_url: str | None
+
+
+class StudentPublicOutSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    public_id: str
+    first_name: str
+    last_name: str
+    program: str | None
+    school: SchoolBriefSchema | None
+    profile: StudentPublicProfileOutSchema | None
 
 
 class StudentUpdateSchema(BaseModel):
@@ -215,6 +249,23 @@ class StudentPublicSchema(BaseModel):
     profile: StudentProfileOutSchema | None
 
 
+class SchoolStudentOutSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    public_id: str
+    first_name: str
+    last_name: str
+    program: str | None
+    school_id: int | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class LinkStudentByPublicIdSchema(BaseModel):
+    student_public_id: str = Field(min_length=36, max_length=36)
+
+
 class CompanyOutSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -238,3 +289,18 @@ class CompanyUpdateSchema(BaseModel):
     email: str | None = Field(default=None, max_length=320)
     description: str | None = None
     website: str | None = Field(default=None, max_length=500)
+
+
+class SchoolOutSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    organization_number: str | None
+    postal_code: str | None
+    city: str | None
+    email: str | None
+    description: str | None
+    website: str | None
+    created_at: datetime
+    updated_at: datetime

@@ -36,6 +36,7 @@ export default function MinProfilPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState('');
+    const [copyStatus, setCopyStatus] = useState('');
 
     // Form state – grundinfo
     const [firstName, setFirstName] = useState('');
@@ -130,6 +131,17 @@ export default function MinProfilPage() {
         }
     };
 
+    const handleCopyPublicId = async () => {
+        if (!student?.public_id) return;
+        try {
+            await navigator.clipboard.writeText(student.public_id);
+            setCopyStatus('Kopierat');
+        } catch {
+            setCopyStatus('Kunde inte kopiera');
+        }
+        setTimeout(() => setCopyStatus(''), 2000);
+    };
+
     if (isLoading) {
         return (
             <div className="max-w-3xl px-6 pt-32 pb-20 mx-auto">
@@ -148,6 +160,11 @@ export default function MinProfilPage() {
 
     const p = student?.profile;
     const displayName = `${student.first_name} ${student.last_name}`.trim();
+    const schoolName = student?.school?.name || 'Ingen skola kopplad';
+    const publicProfileUrl =
+        typeof window !== 'undefined' && student?.public_id
+            ? `${window.location.origin}/student/${student.public_id}`
+            : '';
 
     return (
         <div className="max-w-3xl px-6 pt-32 pb-20 mx-auto">
@@ -175,6 +192,36 @@ export default function MinProfilPage() {
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <InfoRow label="Namn" value={displayName} />
                             <InfoRow label="Program" value={student.program} />
+                            <div>
+                                <p className="text-xs text-text-dim mb-0.5">Skola</p>
+                                <p className="text-sm text-text-main">{schoolName}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-text-dim mb-0.5">Student-ID</p>
+                                <div className="flex items-center gap-2">
+                                    <code className="px-2 py-1 text-xs rounded bg-bg-elevated text-text-main">{student.public_id || '-'}</code>
+                                    <button
+                                        type="button"
+                                        onClick={handleCopyPublicId}
+                                        disabled={!student.public_id}
+                                        className="text-xs font-medium text-accent hover:text-accent/80 disabled:opacity-50"
+                                    >
+                                        Kopiera
+                                    </button>
+                                    {copyStatus && <span className="text-xs text-text-dim">{copyStatus}</span>}
+                                </div>
+                            </div>
+                            {publicProfileUrl && (
+                                <div className="sm:col-span-2">
+                                    <p className="text-xs text-text-dim mb-0.5">Publik profil-URL</p>
+                                    <a
+                                        href={publicProfileUrl}
+                                        className="text-sm break-all text-accent hover:underline"
+                                    >
+                                        {publicProfileUrl}
+                                    </a>
+                                </div>
+                            )}
                         </div>
                     </div>
 

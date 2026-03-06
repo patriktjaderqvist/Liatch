@@ -7,6 +7,13 @@ function asText(value) {
     return typeof value === 'string' ? value : '';
 }
 
+function getErrorMessage(error, fallbackMessage) {
+    if (!error) return fallbackMessage;
+    if (typeof error === 'string') return error;
+    if (typeof error.message === 'string' && error.message.trim()) return error.message;
+    return fallbackMessage;
+}
+
 function normalizeAd(raw) {
     if (!raw || typeof raw !== 'object' || raw.id == null) {
         return null;
@@ -130,7 +137,7 @@ export default function VaraAnnonserPage() {
                     : [];
                 setAds(normalized);
             })
-            .catch((err) => setError(err.message))
+            .catch((err) => setError(getErrorMessage(err, 'Kunde inte hämta dina annonser.')))
             .finally(() => setIsLoading(false));
     }, []);
 
@@ -141,7 +148,7 @@ export default function VaraAnnonserPage() {
             await deleteJobAd(id, accessToken);
             setAds((prev) => prev.filter((ad) => ad.id !== id));
         } catch (err) {
-            setDeleteError(err.message);
+            setDeleteError(getErrorMessage(err, 'Kunde inte ta bort annonsen.'));
         }
     };
 

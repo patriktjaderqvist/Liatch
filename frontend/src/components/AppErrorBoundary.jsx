@@ -1,19 +1,29 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 
-export default class AppErrorBoundary extends React.Component {
+class AppErrorBoundaryInner extends React.Component {
     constructor(props) {
         super(props);
-        this.state = { hasError: false };
+        this.state = { hasError: false, errorMessage: '' };
     }
 
-    static getDerivedStateFromError() {
-        return { hasError: true };
+    static getDerivedStateFromError(error) {
+        return {
+            hasError: true,
+            errorMessage: error?.message || 'Okänt fel',
+        };
     }
 
     componentDidCatch(error, errorInfo) {
         // Keep a trace in console for debugging in production incidents.
         // eslint-disable-next-line no-console
         console.error('Unhandled app error:', error, errorInfo);
+    }
+
+    componentDidUpdate(prevProps) {
+        if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+            this.setState({ hasError: false, errorMessage: '' });
+        }
     }
 
     handleReload = () => {
@@ -36,6 +46,9 @@ export default class AppErrorBoundary extends React.Component {
                     <p className="mb-5 text-sm text-text-muted">
                         Sidan kunde inte renderas korrekt. Prova att ladda om eller gå tillbaka till startsidan.
                     </p>
+                    <p className="mb-5 text-xs text-text-dim">
+                        Fel: {this.state.errorMessage}
+                    </p>
                     <div className="flex flex-wrap gap-3">
                         <button
                             type="button"
@@ -56,4 +69,15 @@ export default class AppErrorBoundary extends React.Component {
             </div>
         );
     }
+}
+
+export default function AppErrorBoundary({ children }) {
+    const location = useLocation();
+    const resetKey = `${location.pathname}${location.search}${location.hash}`;
+
+    return (
+        <AppErrorBoundaryInner resetKey={resetKey}>
+            {children}
+        </AppErrorBoundaryInner>
+    );
 }

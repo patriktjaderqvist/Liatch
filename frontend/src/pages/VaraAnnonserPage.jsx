@@ -15,9 +15,10 @@ function formatDate(dateStr) {
 function AdRow({ ad, onDelete }) {
     const navigate = useNavigate();
     const [isDeleting, setIsDeleting] = useState(false);
+    const title = ad?.title || 'Annons utan titel';
 
     const handleDelete = async () => {
-        if (!window.confirm(`Är du säker på att du vill ta bort "${ad.title}"?`)) return;
+        if (!window.confirm(`Är du säker på att du vill ta bort "${title}"?`)) return;
 
         setIsDeleting(true);
         try {
@@ -31,7 +32,7 @@ function AdRow({ ad, onDelete }) {
         <div className="flex flex-col gap-4 p-5 glass-card rounded-xl sm:flex-row sm:items-center">
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                    <h2 className="text-base font-bold truncate text-text-main">{ad.title}</h2>
+                    <h2 className="text-base font-bold truncate text-text-main">{title}</h2>
                     <span
                         className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${
                             ad.is_active
@@ -89,8 +90,15 @@ export default function VaraAnnonserPage() {
 
     useEffect(() => {
         const accessToken = localStorage.getItem('accessToken');
+        const userRole = localStorage.getItem('userRole');
         if (!accessToken) {
-            setError('Du måste vara inloggad för att se dina annonser.');
+            setError('Du måste vara inloggad för att se dina annonser. Logga in med ett företagskonto.');
+            setIsLoading(false);
+            return;
+        }
+
+        if (userRole !== 'foretag') {
+            setError('Den här sidan är endast tillgänglig för företagskonton.');
             setIsLoading(false);
             return;
         }
@@ -112,6 +120,11 @@ export default function VaraAnnonserPage() {
         }
     };
 
+    const normalizedAds = Array.isArray(ads)
+        ? ads.filter((ad) => ad && typeof ad === 'object' && ad.id != null)
+        : [];
+    const adsCount = normalizedAds.length;
+
     return (
         <div className="max-w-4xl px-6 pt-32 pb-20 mx-auto">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
@@ -132,14 +145,16 @@ export default function VaraAnnonserPage() {
             )}
 
             {error && (
-                <p className="text-sm text-red-400">{error}</p>
+                <div className="p-5 border rounded-xl border-red-500/20 bg-red-500/5">
+                    <p className="text-sm text-red-400">{error}</p>
+                </div>
             )}
 
             {deleteError && (
                 <p className="text-sm text-red-400">{deleteError}</p>
             )}
 
-            {!isLoading && !error && ads.length === 0 && (
+            {!isLoading && !error && adsCount === 0 && (
                 <div className="py-16 text-center border border-fg/10 rounded-2xl">
                     <p className="mb-4 text-text-muted">Ni har inga annonser än.</p>
                     <Link
@@ -151,11 +166,11 @@ export default function VaraAnnonserPage() {
                 </div>
             )}
 
-            {!isLoading && !error && ads.length > 0 && (
+            {!isLoading && !error && adsCount > 0 && (
                 <>
-                    <p className="mb-4 text-xs text-text-dim">{ads.length} annons{ads.length !== 1 ? 'er' : ''}</p>
+                    <p className="mb-4 text-xs text-text-dim">{adsCount} annons{adsCount !== 1 ? 'er' : ''}</p>
                     <div className="flex flex-col gap-3">
-                        {ads.map((ad) => (
+                        {normalizedAds.map((ad) => (
                             <AdRow key={ad.id} ad={ad} onDelete={handleDelete} />
                         ))}
                     </div>

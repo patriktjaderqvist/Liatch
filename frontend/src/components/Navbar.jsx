@@ -102,44 +102,46 @@ export default function Navbar() {
     return (
         <nav className="fixed top-0 z-50 w-full transition-all duration-300">
             <div className="border-b glass border-fg/5 bg-bg-void/80">
-                <div className="flex items-center justify-between h-20 px-6 mx-auto max-w-7xl">
-                    {/* Logo */}
-                    <Link to="/" className="flex items-center gap-3 group">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent">
-                            <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                <path d="M13 2L3 14h9v8l10-12h-9l9-8z" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                        </div>
-                        <span className="text-2xl font-bold tracking-tight font-display text-text-main">Liatch<span className="text-accent">.</span></span>
-                    </Link>
+                <div className="px-4 py-3 mx-auto max-w-7xl sm:px-6">
+                    <div className="flex items-center justify-between gap-4">
+                        {/* Logo */}
+                        <Link to="/" className="flex items-center gap-3 group">
+                            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent">
+                                <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <path d="M13 2L3 14h9v8l10-12h-9l9-8z" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            </div>
+                            <span className="text-2xl font-bold tracking-tight font-display text-text-main">Liatch<span className="text-accent">.</span></span>
+                        </Link>
 
-                    {/* Desktop Nav */}
-                    <div className="items-center hidden gap-8 md:flex">
-                        {renderNavItems()}
+                        {/* Actions */}
+                        <div className="flex items-center gap-3 sm:gap-4">
+                            {!userRole ? (
+                                <>
+                                    <Link to="/login" className="text-sm font-medium transition-colors text-text-muted hover:text-text-main">Logga in</Link>
+                                    <Link to="/skapa-konto" className="bg-fg text-text-inverse hover:bg-accent hover:text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-lg font-bold text-xs sm:text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(var(--accent-rgb),0.4)]">
+                                        Skapa konto
+                                    </Link>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="hidden text-xs text-text-dim whitespace-nowrap max-w-[220px] truncate md:block">
+                                        Inloggad som: {userDisplayName || getRoleFallbackLabel(userRole)}
+                                    </p>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="text-sm font-medium transition-colors text-text-muted hover:text-text-main"
+                                    >
+                                        Logga ut
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-6">
-                        {!userRole ? (
-                            <>
-                                <Link to="/login" className="hidden text-sm font-medium transition-colors md:block text-text-muted hover:text-text-main">Logga in</Link>
-                                <Link to="/skapa-konto" className="bg-fg text-text-inverse hover:bg-accent hover:text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(var(--accent-rgb),0.4)]">
-                                    Skapa konto
-                                </Link>
-                            </>
-                        ) : (
-                            <>
-                                <p className="text-xs text-text-dim whitespace-nowrap max-w-[220px] truncate">
-                                    Inloggad som: {userDisplayName || getRoleFallbackLabel(userRole)}
-                                </p>
-                                <button
-                                    onClick={handleLogout}
-                                    className="text-sm font-medium transition-colors text-text-muted hover:text-text-main"
-                                >
-                                    Logga ut
-                                </button>
-                            </>
-                        )}
+                    {/* Nav Tabs (all breakpoints) */}
+                    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-3 mt-3 border-t border-fg/10">
+                        {renderNavItems()}
                     </div>
                 </div>
             </div>

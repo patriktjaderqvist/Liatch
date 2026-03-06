@@ -1,9 +1,23 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Hero() {
     const [search, setSearch] = useState('');
+    const [userRole, setUserRole] = useState(localStorage.getItem('userRole'));
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const syncRole = () => {
+            setUserRole(localStorage.getItem('userRole'));
+        };
+
+        window.addEventListener('storage', syncRole);
+        window.addEventListener('userRoleChanged', syncRole);
+        return () => {
+            window.removeEventListener('storage', syncRole);
+            window.removeEventListener('userRoleChanged', syncRole);
+        };
+    }, []);
 
     const handleSubmit = (event) => {
         event.preventDefault();
@@ -13,6 +27,10 @@ export default function Hero() {
         }
         navigate(`/annonser?q=${encodeURIComponent(query)}`);
     };
+
+    const isCompany = userRole === 'foretag';
+    const isSchool = userRole === 'skola';
+    const isStudentOrGuest = !isCompany && !isSchool;
 
     return (
         <section className="min-h-screen relative flex items-center justify-center pt-20 overflow-hidden">
@@ -26,44 +44,105 @@ export default function Hero() {
 
             {/* Content */}
             <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">
+                {isStudentOrGuest && (
+                    <>
+                        <h1 className="mt-20 font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter mb-8 leading-[0.9] text-text-main headline-glow transition-colors duration-500">
+                            Hitta din nästa <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-text-main via-text-main to-text-muted">praktik</span>
+                        </h1>
 
+                        <p className="text-lg md:text-xl text-text-muted max-w-2xl mx-auto mb-12 font-light leading-relaxed">
+                            Koppla ihop din potential med branschens ledande företag. <span className="text-text-main font-medium">Liatch</span> är plattformen som förvandlar LIA & Praktik till karriär.
+                        </p>
 
-
-                <h1 className="mt-20 font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter mb-8 leading-[0.9] text-text-main headline-glow transition-colors duration-500">
-                    Hitta din nästa <br />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-text-main via-text-main to-text-muted">praktik</span>
-                </h1>
-
-                <p className="text-lg md:text-xl text-text-muted max-w-2xl mx-auto mb-12 font-light leading-relaxed">
-                    Koppla ihop din potential med branschens ledande företag. <span className="text-text-main font-medium">Liatch</span> är plattformen som förvandlar LIA & Praktik till karriär.
-                </p>
-
-                {/* Search Interface */}
-                <div className="max-w-3xl mx-auto glass p-2 rounded-2xl">
-                    <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-2">
-                        <div className="flex-1 relative group">
-                            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                                <svg className="h-5 w-5 text-text-muted group-focus-within:text-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={(event) => setSearch(event.target.value)}
-                                className="w-full bg-fg/5 border border-fg/5 rounded-xl py-4 pl-12 pr-4 text-text-main placeholder-text-dim focus:outline-none focus:bg-fg/10 focus:border-accent/50 transition-all font-body"
-                                placeholder="Sök efter roll eller stad..."
-                            />
+                        {/* Search Interface */}
+                        <div className="max-w-3xl mx-auto glass p-2 rounded-2xl">
+                            <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-2">
+                                <div className="flex-1 relative group">
+                                    <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                        <svg className="h-5 w-5 text-text-muted group-focus-within:text-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={search}
+                                        onChange={(event) => setSearch(event.target.value)}
+                                        className="w-full bg-fg/5 border border-fg/5 rounded-xl py-4 pl-12 pr-4 text-text-main placeholder-text-dim focus:outline-none focus:bg-fg/10 focus:border-accent/50 transition-all font-body"
+                                        placeholder="Sök efter roll eller stad..."
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={!search.trim()}
+                                    className="bg-accent hover:bg-accent/90 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 hover:shadow-[0_0_30px_rgba(var(--accent-rgb),0.3)] hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
+                                >
+                                    Hitta Plats
+                                </button>
+                            </form>
                         </div>
-                        <button
-                            type="submit"
-                            disabled={!search.trim()}
-                            className="bg-accent hover:bg-accent/90 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 hover:shadow-[0_0_30px_rgba(var(--accent-rgb),0.3)] hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
-                        >
-                            Hitta Plats
-                        </button>
-                    </form>
-                </div>
+                    </>
+                )}
+
+                {isCompany && (
+                    <>
+                        <h1 className="mt-20 font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter mb-8 leading-[0.9] text-text-main headline-glow transition-colors duration-500">
+                            Bygg ert nästa <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-text-main via-text-main to-text-muted">LIA-team</span>
+                        </h1>
+
+                        <p className="text-lg md:text-xl text-text-muted max-w-2xl mx-auto mb-12 font-light leading-relaxed">
+                            Publicera praktikannonser, följ ansökningar och hitta rätt studenter snabbare.
+                        </p>
+
+                        <div className="flex flex-wrap items-center justify-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => navigate('/skapa-annons')}
+                                className="bg-accent hover:bg-accent/90 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 hover:shadow-[0_0_30px_rgba(var(--accent-rgb),0.3)]"
+                            >
+                                Skapa annons
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/vara-annonser')}
+                                className="px-6 py-3 rounded-xl font-bold border border-fg/15 text-text-main hover:border-accent/40 hover:text-accent transition-all"
+                            >
+                                Visa våra annonser
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                {isSchool && (
+                    <>
+                        <h1 className="mt-20 font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter mb-8 leading-[0.9] text-text-main headline-glow transition-colors duration-500">
+                            Följ era studenter <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-text-main via-text-main to-text-muted">i LIA-processen</span>
+                        </h1>
+
+                        <p className="text-lg md:text-xl text-text-muted max-w-2xl mx-auto mb-12 font-light leading-relaxed">
+                            Koppla studenter till skolan, följ deras aktivitet och ge bättre stöd genom hela praktiksökningen.
+                        </p>
+
+                        <div className="flex flex-wrap items-center justify-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => navigate('/studenter')}
+                                className="bg-accent hover:bg-accent/90 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 hover:shadow-[0_0_30px_rgba(var(--accent-rgb),0.3)]"
+                            >
+                                Hantera studenter
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/annonser')}
+                                className="px-6 py-3 rounded-xl font-bold border border-fg/15 text-text-main hover:border-accent/40 hover:text-accent transition-all"
+                            >
+                                Se annonser
+                            </button>
+                        </div>
+                    </>
+                )}
 
                 {/* Stats Ticker */}
 

@@ -3,6 +3,26 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { deleteJobAd, fetchMyJobAds } from '../lib/jobAdsApi';
 
+function asText(value) {
+    return typeof value === 'string' ? value : '';
+}
+
+function normalizeAd(raw) {
+    if (!raw || typeof raw !== 'object' || raw.id == null) {
+        return null;
+    }
+
+    return {
+        id: raw.id,
+        title: asText(raw.title),
+        is_active: Boolean(raw.is_active),
+        remote: Boolean(raw.remote),
+        location: asText(raw.location),
+        employment_type: asText(raw.employment_type),
+        application_deadline: raw.application_deadline || null,
+    };
+}
+
 function formatDate(dateStr) {
     if (!dateStr) return null;
     return new Date(dateStr).toLocaleDateString('sv-SE', {
@@ -15,7 +35,7 @@ function formatDate(dateStr) {
 function AdRow({ ad, onDelete }) {
     const navigate = useNavigate();
     const [isDeleting, setIsDeleting] = useState(false);
-    const title = ad?.title || 'Annons utan titel';
+    const title = ad.title || 'Annons utan titel';
 
     const handleDelete = async () => {
         if (!window.confirm(`Är du säker på att du vill ta bort "${title}"?`)) return;
@@ -104,7 +124,12 @@ export default function VaraAnnonserPage() {
         }
 
         fetchMyJobAds(accessToken)
-            .then((data) => setAds(data))
+            .then((data) => {
+                const normalized = Array.isArray(data)
+                    ? data.map(normalizeAd).filter(Boolean)
+                    : [];
+                setAds(normalized);
+            })
             .catch((err) => setError(err.message))
             .finally(() => setIsLoading(false));
     }, []);
@@ -120,10 +145,7 @@ export default function VaraAnnonserPage() {
         }
     };
 
-    const normalizedAds = Array.isArray(ads)
-        ? ads.filter((ad) => ad && typeof ad === 'object' && ad.id != null)
-        : [];
-    const adsCount = normalizedAds.length;
+    const adsCount = ads.length;
 
     return (
         <div className="max-w-4xl px-6 pt-32 pb-20 mx-auto">
@@ -170,7 +192,7 @@ export default function VaraAnnonserPage() {
                 <>
                     <p className="mb-4 text-xs text-text-dim">{adsCount} annons{adsCount !== 1 ? 'er' : ''}</p>
                     <div className="flex flex-col gap-3">
-                        {normalizedAds.map((ad) => (
+                        {ads.map((ad) => (
                             <AdRow key={ad.id} ad={ad} onDelete={handleDelete} />
                         ))}
                     </div>

@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
+import AppErrorBoundary from './components/AppErrorBoundary';
 import AdsPage from './pages/AdsPage';
 import CompaniesPage from './pages/CompaniesPage';
 import AboutPage from './pages/AboutPage';
@@ -33,36 +34,38 @@ function App() {
     return (
         <>
             <Navbar />
-            <main className="relative pt-0">
-                <Routes>
-                    <Route path="/" element={<Hero />} />
-                    <Route path="/annonser" element={<AdsPage />} />
-                    <Route path="/annonser/:id" element={<JobAdPage />} />
-                    <Route path="/foretag" element={<CompaniesPage />} />
-                    <Route path="/om-oss" element={<AboutPage />} />
-                    <Route path="/skolor" element={<SchoolsPage />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/skapa-konto" element={<CreateAccountPage />} />
-                    <Route path="/hjalp" element={<HelpPage />} />
-                    <Route path="/integritet" element={<IntegrityPage />} />
-                    <Route path="/villkor" element={<TermsPage />} />
-                    <Route path="/cookies" element={<CookiesPage />} />
-                    {/* Authenticated routes */}
-                    <Route path="/mina-sokningar" element={<MinaSokningarPage />} />
-                    <Route path="/min-profil" element={<MinProfilPage />} />
-                    <Route path="/vara-annonser" element={<VaraAnnonserPage />} />
-                    <Route path="/skapa-annons" element={<SkapaAnnonsPage />} />
-                    <Route path="/redigera-annons/:id" element={<RedigeraAnnonsPage />} />
-                    <Route path="/vara-annonser/:id/ansokningar" element={<AnsokningarPage />} />
-                    <Route path="/foretagsprofil" element={<ForetagsprofilPage />} />
-                    <Route path="/studenter" element={<StudenterPage />} />
-                    <Route path="/studenter/:id" element={<StudentPublicPage />} />
-                    <Route path="/skolprofil" element={<SkolprofilPage />} />
-                    <Route path="/student/:publicId" element={<StudentPublicProfilePage />} />
-                    <Route path="/foretag/:publicId" element={<CompanyPublicProfilePage />} />
-                    <Route path="/skola/:publicId" element={<SchoolPublicProfilePage />} />
-                </Routes>
-            </main>
+            <AppErrorBoundary>
+                <main className="relative pt-0">
+                    <Routes>
+                        <Route path="/" element={<Hero />} />
+                        <Route path="/annonser" element={<AdsPage />} />
+                        <Route path="/annonser/:id" element={<JobAdPage />} />
+                        <Route path="/foretag" element={<CompaniesPage />} />
+                        <Route path="/om-oss" element={<AboutPage />} />
+                        <Route path="/skolor" element={<SchoolsPage />} />
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/skapa-konto" element={<CreateAccountPage />} />
+                        <Route path="/hjalp" element={<HelpPage />} />
+                        <Route path="/integritet" element={<IntegrityPage />} />
+                        <Route path="/villkor" element={<TermsPage />} />
+                        <Route path="/cookies" element={<CookiesPage />} />
+                        {/* Authenticated routes */}
+                        <Route path="/mina-sokningar" element={<MinaSokningarPage />} />
+                        <Route path="/min-profil" element={<MinProfilPage />} />
+                        <Route path="/vara-annonser" element={<VaraAnnonserPage />} />
+                        <Route path="/skapa-annons" element={<SkapaAnnonsPage />} />
+                        <Route path="/redigera-annons/:id" element={<RedigeraAnnonsPage />} />
+                        <Route path="/vara-annonser/:id/ansokningar" element={<AnsokningarPage />} />
+                        <Route path="/foretagsprofil" element={<ForetagsprofilPage />} />
+                        <Route path="/studenter" element={<StudenterPage />} />
+                        <Route path="/studenter/:id" element={<StudentPublicPage />} />
+                        <Route path="/skolprofil" element={<SkolprofilPage />} />
+                        <Route path="/student/:publicId" element={<StudentPublicProfilePage />} />
+                        <Route path="/foretag/:publicId" element={<CompanyPublicProfilePage />} />
+                        <Route path="/skola/:publicId" element={<SchoolPublicProfilePage />} />
+                    </Routes>
+                </main>
+            </AppErrorBoundary>
             <Footer />
         </>
     );

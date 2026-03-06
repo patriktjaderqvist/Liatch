@@ -23,14 +23,7 @@ export default function StudentPublicProfilePage() {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-            setError('Du måste vara inloggad för att se studentprofiler.');
-            setIsLoading(false);
-            return;
-        }
-
-        fetchStudentByPublicId(publicId, token)
+        fetchStudentByPublicId(publicId)
             .then((data) => setStudent(data))
             .catch((err) => setError(err.message))
             .finally(() => setIsLoading(false));

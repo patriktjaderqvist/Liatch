@@ -6,6 +6,7 @@ from app.api.v1.core.models import School, Student, User
 from app.api.v1.core.schemas import (
     LinkStudentByPublicIdSchema,
     SchoolOutSchema,
+    SchoolPublicOutSchema,
     SchoolStudentOutSchema,
 )
 from app.db_setup import get_db
@@ -30,6 +31,20 @@ def get_my_school(
 ):
     school_id = _require_school(current_user)
     school = db.get(School, school_id)
+    if not school:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Skolan hittades inte.",
+        )
+    return school
+
+
+@router.get("/public/{public_id}", response_model=SchoolPublicOutSchema)
+def get_school_by_public_id(
+    public_id: str,
+    db: Session = Depends(get_db),
+):
+    school = db.scalars(select(School).where(School.public_id == public_id)).first()
     if not school:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

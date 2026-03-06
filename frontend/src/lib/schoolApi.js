@@ -36,6 +36,17 @@ export async function fetchMySchoolStudents(accessToken) {
     );
 }
 
+export async function fetchMySchool(accessToken) {
+    return requestJson(
+        `${apiBaseUrl}/api/v1/schools/me`,
+        {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${accessToken}` },
+        },
+        'Kunde inte hämta skolprofilen.'
+    );
+}
+
 export async function linkStudentByPublicId(studentPublicId, accessToken) {
     return requestJson(
         `${apiBaseUrl}/api/v1/schools/me/students/link`,
@@ -48,5 +59,15 @@ export async function linkStudentByPublicId(studentPublicId, accessToken) {
             body: JSON.stringify({ student_public_id: studentPublicId }),
         },
         'Kunde inte koppla studenten till skolan.'
+    );
+}
+
+export async function fetchSchoolByPublicId(publicId) {
+    return requestJson(
+        `${apiBaseUrl}/api/v1/schools/public/${encodeURIComponent(publicId)}`,
+        {
+            method: 'GET',
+        },
+        'Kunde inte hämta skolprofilen.'
     );
 }

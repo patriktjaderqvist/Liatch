@@ -77,12 +77,11 @@ export async function fetchStudent(studentId, accessToken) {
     );
 }
 
-export async function fetchStudentByPublicId(publicId, accessToken) {
+export async function fetchStudentByPublicId(publicId) {
     return requestJson(
         `${apiBaseUrl}/api/v1/students/public/${encodeURIComponent(publicId)}`,
         {
             method: 'GET',
-            headers: { Authorization: `Bearer ${accessToken}` },
         },
         'Kunde inte hämta studentprofilen.'
     );

@@ -48,12 +48,8 @@ def get_my_student(
 @router.get("/public/{public_id}", response_model=StudentPublicOutSchema)
 def get_student_by_public_id(
     public_id: str,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    # Requires auth to avoid exposing student profiles anonymously.
-    _ = current_user
-
     student = db.scalars(
         select(Student)
         .where(Student.public_id == public_id)

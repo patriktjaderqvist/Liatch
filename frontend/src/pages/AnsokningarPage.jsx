@@ -29,12 +29,13 @@ function ApplicationCard({ application, onStatusChange, availableActions }) {
     };
 
     const { student, cover_letter, created_at } = application;
+    const studentProfilePath = student.public_id ? `/student/${student.public_id}` : `/studenter/${student.id}`;
 
     return (
         <div className="flex flex-col gap-3 p-4 glass-card rounded-xl">
             <div>
                 <Link
-                    to={`/studenter/${student.id}`}
+                    to={studentProfilePath}
                     className="text-sm font-bold transition-colors text-text-main hover:text-accent"
                 >
                     {student.first_name} {student.last_name}

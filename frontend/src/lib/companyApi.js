@@ -50,3 +50,13 @@ export async function updateMyCompany(payload, accessToken) {
         'Kunde inte uppdatera företagsprofilen.'
     );
 }
+
+export async function fetchCompanyByPublicId(publicId) {
+    return requestJson(
+        `${apiBaseUrl}/api/v1/companies/public/${encodeURIComponent(publicId)}`,
+        {
+            method: 'GET',
+        },
+        'Kunde inte hämta företagsprofilen.'
+    );
+}

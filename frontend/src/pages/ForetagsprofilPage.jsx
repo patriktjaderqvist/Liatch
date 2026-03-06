@@ -36,6 +36,7 @@ export default function ForetagsprofilPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState('');
+    const [copyStatus, setCopyStatus] = useState('');
 
     // Formulärfält
     const [name, setName] = useState('');
@@ -112,6 +113,17 @@ export default function ForetagsprofilPage() {
         }
     };
 
+    const handleCopyPublicId = async () => {
+        if (!company?.public_id) return;
+        try {
+            await navigator.clipboard.writeText(company.public_id);
+            setCopyStatus('Kopierat');
+        } catch {
+            setCopyStatus('Kunde inte kopiera');
+        }
+        setTimeout(() => setCopyStatus(''), 2000);
+    };
+
     if (isLoading) {
         return (
             <div className="max-w-3xl px-6 pt-32 pb-20 mx-auto">
@@ -127,6 +139,11 @@ export default function ForetagsprofilPage() {
             </div>
         );
     }
+
+    const publicProfileUrl =
+        typeof window !== 'undefined' && company?.public_id
+            ? `${window.location.origin}/foretag/${company.public_id}`
+            : '';
 
     return (
         <div className="max-w-3xl px-6 pt-32 pb-20 mx-auto">
@@ -157,6 +174,29 @@ export default function ForetagsprofilPage() {
                             <InfoRow label="Stad" value={company.city} />
                             <InfoRow label="Postnummer" value={company.postal_code} />
                             <InfoRow label="E-post" value={company.email} />
+                            <div className="sm:col-span-2">
+                                <p className="text-xs text-text-dim mb-0.5">Företags-ID</p>
+                                <div className="flex items-center gap-2">
+                                    <code className="px-2 py-1 text-xs rounded bg-bg-elevated text-text-main">{company.public_id || '-'}</code>
+                                    <button
+                                        type="button"
+                                        onClick={handleCopyPublicId}
+                                        disabled={!company.public_id}
+                                        className="text-xs font-medium text-accent hover:text-accent/80 disabled:opacity-50"
+                                    >
+                                        Kopiera
+                                    </button>
+                                    {copyStatus && <span className="text-xs text-text-dim">{copyStatus}</span>}
+                                </div>
+                            </div>
+                            {publicProfileUrl && (
+                                <div className="sm:col-span-2">
+                                    <p className="text-xs text-text-dim mb-0.5">Publik profil-URL</p>
+                                    <a href={publicProfileUrl} className="text-sm break-all text-accent hover:underline">
+                                        {publicProfileUrl}
+                                    </a>
+                                </div>
+                            )}
                         </div>
                     </div>
 

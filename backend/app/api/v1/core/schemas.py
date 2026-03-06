@@ -61,6 +61,7 @@ class CompanyBriefSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    public_id: str
     name: str
     city: str | None
     website: str | None
@@ -70,6 +71,7 @@ class SchoolBriefSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    public_id: str
     name: str
     city: str | None
     website: str | None
@@ -218,6 +220,7 @@ class StudentBriefSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    public_id: str
     first_name: str
     last_name: str
     program: str | None
@@ -270,6 +273,7 @@ class CompanyOutSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    public_id: str
     name: str
     organization_number: str | None
     postal_code: str | None
@@ -291,10 +295,22 @@ class CompanyUpdateSchema(BaseModel):
     website: str | None = Field(default=None, max_length=500)
 
 
+class CompanyPublicOutSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    public_id: str
+    name: str
+    city: str | None
+    website: str | None
+    description: str | None
+
+
 class SchoolOutSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    public_id: str
     name: str
     organization_number: str | None
     postal_code: str | None
@@ -304,3 +320,14 @@ class SchoolOutSchema(BaseModel):
     website: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class SchoolPublicOutSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    public_id: str
+    name: str
+    city: str | None
+    website: str | None
+    description: str | None

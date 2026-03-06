@@ -133,7 +133,13 @@ export default function JobAdPage() {
                     )}
                 </div>
                 <h1 className="mb-2 text-4xl font-bold font-display text-text-main">{ad.title}</h1>
-                <p className="text-lg font-medium text-accent">{ad.company?.name}</p>
+                {ad.company?.public_id ? (
+                    <Link to={`/foretag/${ad.company.public_id}`} className="text-lg font-medium text-accent hover:underline">
+                        {ad.company?.name}
+                    </Link>
+                ) : (
+                    <p className="text-lg font-medium text-accent">{ad.company?.name}</p>
+                )}
                 {ad.location && (
                     <p className="flex items-center gap-1 mt-1 text-sm text-text-dim">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

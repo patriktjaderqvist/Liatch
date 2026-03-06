@@ -39,6 +39,13 @@ class School(TimestampMixin, Base):
     __tablename__ = "schools"
 
     name: Mapped[str] = mapped_column(String(150), nullable=False, unique=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36),
+        unique=True,
+        nullable=False,
+        index=True,
+        default=lambda: str(uuid4()),
+    )
     organization_number: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True)
     email: Mapped[str | None] = mapped_column(String(320), unique=True, nullable=True)
     website: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -54,6 +61,13 @@ class Company(TimestampMixin, Base):
     __tablename__ = "companies"
 
     name: Mapped[str] = mapped_column(String(150), nullable=False, unique=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36),
+        unique=True,
+        nullable=False,
+        index=True,
+        default=lambda: str(uuid4()),
+    )
     organization_number: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True)
     postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
     city: Mapped[str | None] = mapped_column(String(120), nullable=True)

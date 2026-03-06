@@ -46,6 +46,12 @@ def _build_student_public_id(seed_value: str | None) -> str:
     return str(uuid4())
 
 
+def _build_public_id(prefix: str, seed_value: str | None) -> str:
+    if seed_value:
+        return str(uuid5(NAMESPACE_DNS, f"liatch-{prefix}:{seed_value}"))
+    return str(uuid4())
+
+
 def _upsert_school(
     db: Session,
     *,
@@ -61,7 +67,7 @@ def _upsert_school(
     created = school is None
 
     if created:
-        school = School(name=name)
+        school = School(public_id=_build_public_id("school", organization_number or name), name=name)
         db.add(school)
 
     school.organization_number = organization_number
@@ -70,6 +76,8 @@ def _upsert_school(
     school.description = description
     school.city = city
     school.postal_code = postal_code
+    if not school.public_id:
+        school.public_id = _build_public_id("school", organization_number or name)
     db.flush()
     return school, created
 
@@ -90,7 +98,7 @@ def _upsert_company(
     created = company is None
 
     if created:
-        company = Company(name=name)
+        company = Company(public_id=_build_public_id("company", organization_number or name), name=name)
         db.add(company)
 
     company.organization_number = organization_number
@@ -100,6 +108,8 @@ def _upsert_company(
     company.city = city
     company.postal_code = postal_code
     company.analytics_module = analytics_module
+    if not company.public_id:
+        company.public_id = _build_public_id("company", organization_number or name)
     db.flush()
     return company, created
 

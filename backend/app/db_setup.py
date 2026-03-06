@@ -24,6 +24,9 @@ def _apply_sqlite_bootstrap_migrations(db_engine: Engine) -> None:
     with db_engine.begin() as connection:
         if "companies" in table_names:
             _migrate_legacy_companies_table(connection, inspector)
+            _migrate_companies_public_id(connection)
+        if "schools" in table_names:
+            _migrate_schools_public_id(connection)
         if "students" in table_names:
             _migrate_students_school_id_nullable(connection)
             _migrate_students_public_id(connection)
@@ -130,6 +133,46 @@ def _migrate_students_public_id(connection: Connection) -> None:
     if not _sqlite_index_exists(connection, "ix_students_public_id"):
         connection.execute(
             text("CREATE UNIQUE INDEX ix_students_public_id ON students (public_id)")
+        )
+
+
+def _migrate_companies_public_id(connection: Connection) -> None:
+    if not _sqlite_column_exists(connection, "companies", "public_id"):
+        connection.execute(text("ALTER TABLE companies ADD COLUMN public_id VARCHAR(36)"))
+
+    company_rows = connection.execute(
+        text("SELECT id FROM companies WHERE public_id IS NULL OR TRIM(public_id) = ''")
+    ).fetchall()
+
+    for row in company_rows:
+        connection.execute(
+            text("UPDATE companies SET public_id = :public_id WHERE id = :id"),
+            {"public_id": str(uuid4()), "id": row[0]},
+        )
+
+    if not _sqlite_index_exists(connection, "ix_companies_public_id"):
+        connection.execute(
+            text("CREATE UNIQUE INDEX ix_companies_public_id ON companies (public_id)")
+        )
+
+
+def _migrate_schools_public_id(connection: Connection) -> None:
+    if not _sqlite_column_exists(connection, "schools", "public_id"):
+        connection.execute(text("ALTER TABLE schools ADD COLUMN public_id VARCHAR(36)"))
+
+    school_rows = connection.execute(
+        text("SELECT id FROM schools WHERE public_id IS NULL OR TRIM(public_id) = ''")
+    ).fetchall()
+
+    for row in school_rows:
+        connection.execute(
+            text("UPDATE schools SET public_id = :public_id WHERE id = :id"),
+            {"public_id": str(uuid4()), "id": row[0]},
+        )
+
+    if not _sqlite_index_exists(connection, "ix_schools_public_id"):
+        connection.execute(
+            text("CREATE UNIQUE INDEX ix_schools_public_id ON schools (public_id)")
         )
 
 

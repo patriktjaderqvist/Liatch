@@ -161,6 +161,7 @@ export default function MinProfilPage() {
     const p = student?.profile;
     const displayName = `${student.first_name} ${student.last_name}`.trim();
     const schoolName = student?.school?.name || 'Ingen skola kopplad';
+    const userEmail = localStorage.getItem('userEmail') || '';
     const publicProfileUrl =
         typeof window !== 'undefined' && student?.public_id
             ? `${window.location.origin}/student/${student.public_id}`
@@ -192,6 +193,7 @@ export default function MinProfilPage() {
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <InfoRow label="Namn" value={displayName} />
                             <InfoRow label="Program" value={student.program} />
+                            <InfoRow label="E-post" value={userEmail} />
                             <div>
                                 <p className="text-xs text-text-dim mb-0.5">Skola</p>
                                 <p className="text-sm text-text-main">{schoolName}</p>

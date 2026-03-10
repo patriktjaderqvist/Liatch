@@ -263,6 +263,7 @@ class SchoolStudentOutSchema(BaseModel):
     school_id: int | None
     created_at: datetime
     updated_at: datetime
+    application_count: int = 0
 
 
 class LinkStudentByPublicIdSchema(BaseModel):
@@ -331,3 +332,18 @@ class SchoolPublicOutSchema(BaseModel):
     city: str | None
     website: str | None
     description: str | None
+
+
+class SchoolUpdateSchema(BaseModel):
+    name: str | None = Field(default=None, max_length=150)
+    organization_number: str | None = Field(default=None, max_length=50)
+    postal_code: str | None = Field(default=None, max_length=20)
+    city: str | None = Field(default=None, max_length=120)
+    email: str | None = Field(default=None, max_length=320)
+    description: str | None = None
+    website: str | None = Field(default=None, max_length=500)
+
+
+class StudentContactSchema(BaseModel):
+    phone: str | None
+    email: str | None

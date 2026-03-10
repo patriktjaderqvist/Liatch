@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.v1.core.models import Student, StudentProfile, User
+from app.api.v1.core.models import Student, StudentProfile, User, UserType
 from app.api.v1.core.schemas import (
+    StudentContactSchema,
     StudentPublicOutSchema,
     StudentOutSchema,
     StudentProfileOutSchema,
@@ -127,6 +128,33 @@ def update_my_profile(
     db.commit()
     db.refresh(profile)
     return profile
+
+
+@router.get("/public/{public_id}/contact", response_model=StudentContactSchema)
+def get_student_contact(
+    public_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.user_type != UserType.COMPANY or current_user.company_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Endast inloggade företag kan se kontaktinformation.",
+        )
+    student = db.scalars(
+        select(Student)
+        .where(Student.public_id == public_id)
+        .options(selectinload(Student.profile), selectinload(Student.user))
+    ).first()
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student hittades inte.",
+        )
+    return {
+        "phone": student.profile.phone if student.profile else None,
+        "email": student.user.email if student.user else None,
+    }
 
 
 @router.get("/{student_id}", response_model=StudentPublicSchema)

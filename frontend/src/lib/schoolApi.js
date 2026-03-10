@@ -71,3 +71,18 @@ export async function fetchSchoolByPublicId(publicId) {
         'Kunde inte hämta skolprofilen.'
     );
 }
+
+export async function updateMySchool(payload, accessToken) {
+    return requestJson(
+        `${apiBaseUrl}/api/v1/schools/me`,
+        {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify(payload),
+        },
+        'Kunde inte uppdatera skolprofilen.'
+    );
+}

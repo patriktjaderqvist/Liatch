@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { fetchStudentByPublicId } from '../lib/studentApi';
+import { fetchStudentByPublicId, fetchStudentContact } from '../lib/studentApi';
 
 function LinkRow({ href, label }) {
     if (!href) return null;
@@ -21,10 +21,22 @@ export default function StudentPublicProfilePage() {
     const [student, setStudent] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [contact, setContact] = useState(null);
 
     useEffect(() => {
+        const token = localStorage.getItem('accessToken');
+        const role = localStorage.getItem('userRole');
+
         fetchStudentByPublicId(publicId)
-            .then((data) => setStudent(data))
+            .then((data) => {
+                setStudent(data);
+                if (role === 'foretag' && token) {
+                    return fetchStudentContact(publicId, token);
+                }
+            })
+            .then((contactData) => {
+                if (contactData) setContact(contactData);
+            })
             .catch((err) => setError(err.message))
             .finally(() => setIsLoading(false));
     }, [publicId]);
@@ -73,7 +85,7 @@ export default function StudentPublicProfilePage() {
                 {(profile?.bio || profile?.city) && (
                     <div className="p-6 glass-card rounded-2xl">
                         <h2 className="mb-4 text-sm font-semibold tracking-wider uppercase text-text-dim">Om studenten</h2>
-                        {profile?.bio && <p className="text-sm leading-relaxed text-text-muted mb-4">{profile.bio}</p>}
+                        {profile?.bio && <p className="mb-4 text-sm leading-relaxed text-text-muted">{profile.bio}</p>}
                         {profile?.city && (
                             <div>
                                 <p className="text-xs text-text-dim mb-0.5">Stad</p>
@@ -91,6 +103,26 @@ export default function StudentPublicProfilePage() {
                             <LinkRow href={profile?.github_url} label="GitHub" />
                             <LinkRow href={profile?.portfolio_url} label="Portfolio" />
                             <LinkRow href={profile?.cv_url} label="CV" />
+                        </div>
+                    </div>
+                )}
+
+                {contact && (contact.phone || contact.email) && (
+                    <div className="p-6 glass-card rounded-2xl">
+                        <h2 className="mb-4 text-sm font-semibold tracking-wider uppercase text-text-dim">Kontakt</h2>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            {contact.email && (
+                                <div>
+                                    <p className="text-xs text-text-dim mb-0.5">E-post</p>
+                                    <a href={`mailto:${contact.email}`} className="text-sm text-accent hover:underline">{contact.email}</a>
+                                </div>
+                            )}
+                            {contact.phone && (
+                                <div>
+                                    <p className="text-xs text-text-dim mb-0.5">Telefon</p>
+                                    <a href={`tel:${contact.phone}`} className="text-sm text-accent hover:underline">{contact.phone}</a>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

@@ -68,22 +68,22 @@ export default function StudenterPage() {
     };
 
     return (
-        <div className="pt-32 px-6 max-w-7xl mx-auto">
-            <h1 className="text-4xl font-display font-bold text-text-main mb-3">Studenter</h1>
-            <p className="text-text-muted mb-8">
+        <div className="px-6 pt-32 mx-auto max-w-7xl">
+            <h1 className="mb-3 text-4xl font-bold font-display text-text-main">Studenter</h1>
+            <p className="mb-8 text-text-muted">
                 Koppla en student till er skola genom att ange studentens publika student-ID.
             </p>
 
             <form
                 onSubmit={handleLinkStudent}
-                className="p-5 mb-8 rounded-2xl border border-fg/10 bg-bg-elevated flex flex-col sm:flex-row gap-3"
+                className="flex flex-col gap-3 p-5 mb-8 border rounded-2xl border-fg/10 bg-bg-elevated sm:flex-row"
             >
                 <input
                     type="text"
                     value={studentPublicId}
                     onChange={(e) => setStudentPublicId(e.target.value)}
                     placeholder="Student-ID (t.ex. 123e4567-e89b-12d3-a456-426614174000)"
-                    className="flex-1 px-3 py-2 rounded-lg border border-fg/15 bg-bg-void text-text-main placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-accent"
+                    className="flex-1 px-3 py-2 border rounded-lg border-fg/15 bg-bg-void text-text-main placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-accent"
                 />
                 <button
                     type="submit"
@@ -104,15 +104,22 @@ export default function StudenterPage() {
             ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {students.map((student) => (
-                        <div key={student.id} className="p-5 rounded-2xl border border-fg/10 bg-bg-elevated">
-                            <p className="text-base font-semibold text-text-main">
-                                {student.first_name} {student.last_name}
-                            </p>
-                            <p className="text-sm text-text-muted mt-1">
+                        <div key={student.id} className="p-5 border rounded-2xl border-fg/10 bg-bg-elevated">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                                <p className="text-base font-semibold text-text-main">
+                                    {student.first_name} {student.last_name}
+                                </p>
+                                {student.application_count > 0 && (
+                                    <span className="shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">
+                                        {student.application_count} {student.application_count === 1 ? 'ansökan' : 'ansökningar'}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="mt-1 text-sm text-text-muted">
                                 {student.program || 'Program saknas'}
                             </p>
-                            <p className="text-xs text-text-dim mt-4 mb-1">Student-ID</p>
-                            <code className="text-xs text-text-main break-all">{student.public_id}</code>
+                            <p className="mt-4 mb-1 text-xs text-text-dim">Student-ID</p>
+                            <code className="text-xs break-all text-text-main">{student.public_id}</code>
                             <div className="mt-4">
                                 <a
                                     href={`/student/${student.public_id}`}

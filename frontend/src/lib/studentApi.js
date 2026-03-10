@@ -86,3 +86,14 @@ export async function fetchStudentByPublicId(publicId) {
         'Kunde inte hämta studentprofilen.'
     );
 }
+
+export async function fetchStudentContact(publicId, accessToken) {
+    return requestJson(
+        `${apiBaseUrl}/api/v1/students/public/${publicId}/contact`,
+        {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${accessToken}` },
+        },
+        'Kunde inte hämta kontaktinformation.'
+    );
+}

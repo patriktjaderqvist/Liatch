@@ -93,6 +93,11 @@ cd backend
 pip install -r requirements.txt
 uvicorn main:app --reload
 
+# Optional (AI recommendations)
+# add to backend/.env
+# GROQ_API_KEY=...
+# GROQ_MODEL=llama-3.1-8b-instant
+
 # Database migrations (Alembic)
 cd backend
 

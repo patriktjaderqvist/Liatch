@@ -347,3 +347,21 @@ class SchoolUpdateSchema(BaseModel):
 class StudentContactSchema(BaseModel):
     phone: str | None
     email: str | None
+
+
+class JobAdRecommendationSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    score: int
+    reasons: list[str]
+    source: str
+    job_ad: JobAdOutSchema
+
+
+class StudentRecommendationSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    score: int
+    reasons: list[str]
+    source: str
+    student: StudentPublicOutSchema

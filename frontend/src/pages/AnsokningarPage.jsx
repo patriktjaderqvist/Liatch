@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { fetchJobAd } from '../lib/jobAdsApi';
 import { fetchJobAdApplications, updateApplicationStatus } from '../lib/applicationsApi';
+import { fetchRecommendedStudentsForJobAd } from '../lib/recommendationsApi';
 
 function formatDate(dateStr) {
     if (!dateStr) return null;
@@ -113,6 +114,45 @@ function KanbanColumn({ title, applications, onStatusChange, availableActions })
     );
 }
 
+function RecommendedStudentCard({ recommendation }) {
+    const student = recommendation.student;
+    const profilePath = student?.public_id ? `/student/${student.public_id}` : null;
+
+    return (
+        <div className="flex flex-col gap-2 p-4 border rounded-xl border-accent/20 bg-accent/5">
+            <div className="flex items-start justify-between gap-2">
+                <div>
+                    {profilePath ? (
+                        <Link to={profilePath} className="text-sm font-bold text-text-main hover:text-accent">
+                            {student.first_name} {student.last_name}
+                        </Link>
+                    ) : (
+                        <p className="text-sm font-bold text-text-main">
+                            {student.first_name} {student.last_name}
+                        </p>
+                    )}
+                    {student.program && (
+                        <p className="text-xs text-text-dim">{student.program}</p>
+                    )}
+                </div>
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-full border border-accent/30 text-accent bg-accent/10">
+                    {recommendation.score}%
+                </span>
+            </div>
+
+            {student.school?.name && (
+                <p className="text-xs text-text-dim">Skola: {student.school.name}</p>
+            )}
+
+            <ul className="flex flex-col gap-1 pl-4 text-xs text-text-muted list-disc">
+                {(recommendation.reasons || []).slice(0, 2).map((reason) => (
+                    <li key={reason}>{reason}</li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
 export default function AnsokningarPage() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -120,6 +160,9 @@ export default function AnsokningarPage() {
     const [applications, setApplications] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [recommendedStudents, setRecommendedStudents] = useState([]);
+    const [isRecommendationsLoading, setIsRecommendationsLoading] = useState(false);
+    const [recommendationsError, setRecommendationsError] = useState('');
 
     useEffect(() => {
         const accessToken = localStorage.getItem('accessToken');
@@ -136,6 +179,26 @@ export default function AnsokningarPage() {
             })
             .catch((err) => setError(err.message))
             .finally(() => setIsLoading(false));
+    }, [id]);
+
+    useEffect(() => {
+        const accessToken = localStorage.getItem('accessToken');
+        if (!accessToken) {
+            setRecommendedStudents([]);
+            setRecommendationsError('');
+            return;
+        }
+
+        setIsRecommendationsLoading(true);
+        setRecommendationsError('');
+
+        fetchRecommendedStudentsForJobAd(id, accessToken, 6)
+            .then((data) => setRecommendedStudents(Array.isArray(data) ? data : []))
+            .catch((err) => {
+                setRecommendedStudents([]);
+                setRecommendationsError(err.message);
+            })
+            .finally(() => setIsRecommendationsLoading(false));
     }, [id]);
 
     const handleStatusChange = async (applicationId, newStatus) => {
@@ -189,6 +252,44 @@ export default function AnsokningarPage() {
                 <h1 className="mb-2 text-4xl font-bold font-display text-text-main">Ansökningar</h1>
                 <p className="text-text-muted">{jobAd?.title}</p>
             </div>
+
+            <section className="p-5 mb-8 border rounded-2xl border-accent/20 bg-accent/5">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                    <h2 className="text-sm font-bold tracking-[0.08em] uppercase text-text-main">
+                        Rekommenderade profiler
+                    </h2>
+                    <span className="text-xs text-text-dim">Powered by Groq + fallback</span>
+                </div>
+
+                {isRecommendationsLoading && (
+                    <p className="text-sm text-text-dim">Tar fram rekommendationer...</p>
+                )}
+
+                {!isRecommendationsLoading && recommendationsError && (
+                    <p className="text-sm text-text-dim">
+                        Rekommendationer kunde inte laddas just nu: {recommendationsError}
+                    </p>
+                )}
+
+                {!isRecommendationsLoading && !recommendationsError && recommendedStudents.length === 0 && (
+                    <p className="text-sm text-text-dim">
+                        Inga profiler att rekommendera just nu.
+                    </p>
+                )}
+
+                {!isRecommendationsLoading && recommendedStudents.length > 0 && (
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        {recommendedStudents
+                            .filter((recommendation) => recommendation?.student?.public_id)
+                            .map((recommendation) => (
+                                <RecommendedStudentCard
+                                    key={recommendation.student.public_id}
+                                    recommendation={recommendation}
+                                />
+                            ))}
+                    </div>
+                )}
+            </section>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 <KanbanColumn

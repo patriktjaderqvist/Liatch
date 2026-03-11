@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { fetchJobAds } from '../lib/jobAdsApi';
+import { fetchRecommendedJobAds } from '../lib/recommendationsApi';
 import { fetchMyStudent } from '../lib/studentApi';
 
 const PAGE_SIZE = 12;
@@ -129,6 +130,34 @@ function AdCard({ ad, to }) {
     );
 }
 
+function RecommendationStripCard({ recommendation, to }) {
+    const ad = recommendation.job_ad;
+    return (
+        <Link
+            to={to}
+            className="flex flex-col gap-2 p-4 transition-colors border rounded-xl border-accent/20 bg-accent/5 hover:border-accent/40"
+        >
+            <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-bold leading-snug text-text-main">{ad.title}</p>
+                <span className="shrink-0 px-2 py-0.5 text-xs font-semibold rounded-full border border-accent/30 text-accent bg-accent/10">
+                    {recommendation.score}%
+                </span>
+            </div>
+            <p className="text-xs font-medium text-accent">{ad.company?.name}</p>
+            <div className="flex flex-wrap gap-2">
+                {recommendation.reasons?.slice(0, 2).map((reason) => (
+                    <span
+                        key={reason}
+                        className="px-2 py-1 text-xs border rounded-full bg-fg/5 text-text-dim border-fg/10"
+                    >
+                        {reason}
+                    </span>
+                ))}
+            </div>
+        </Link>
+    );
+}
+
 function buildRecommendedFilters(student) {
     const recommended = [];
     const profileCity = (student?.profile?.city || '').trim();
@@ -176,6 +205,9 @@ export default function AdsPage() {
     const [isLoggedIn, setIsLoggedIn] = useState(Boolean(localStorage.getItem('accessToken')));
     const [userRole, setUserRole] = useState(localStorage.getItem('userRole'));
     const [recommendedFilters, setRecommendedFilters] = useState([]);
+    const [recommendedAds, setRecommendedAds] = useState([]);
+    const [isRecommendationsLoading, setIsRecommendationsLoading] = useState(false);
+    const [recommendationsError, setRecommendationsError] = useState('');
 
     const [selectedLocation, setSelectedLocation] = useState('all');
     const [selectedWorkMode, setSelectedWorkMode] = useState('all');
@@ -232,6 +264,38 @@ export default function AdsPage() {
         };
 
         loadRecommendations();
+    }, [isLoggedIn, userRole]);
+
+    useEffect(() => {
+        const loadRecommendedAds = async () => {
+            if (!isLoggedIn || userRole !== 'privatperson') {
+                setRecommendedAds([]);
+                setRecommendationsError('');
+                return;
+            }
+
+            const accessToken = localStorage.getItem('accessToken');
+            if (!accessToken) {
+                setRecommendedAds([]);
+                setRecommendationsError('');
+                return;
+            }
+
+            setIsRecommendationsLoading(true);
+            setRecommendationsError('');
+
+            try {
+                const data = await fetchRecommendedJobAds(accessToken, 4);
+                setRecommendedAds(Array.isArray(data) ? data : []);
+            } catch (err) {
+                setRecommendedAds([]);
+                setRecommendationsError(err.message);
+            } finally {
+                setIsRecommendationsLoading(false);
+            }
+        };
+
+        loadRecommendedAds();
     }, [isLoggedIn, userRole]);
 
     useEffect(() => {
@@ -370,6 +434,47 @@ export default function AdsPage() {
                 <h1 className="mb-2 text-4xl font-bold font-display text-text-main">Praktikannonser</h1>
                 <p className="text-text-muted">Hitta din nästa LIA-plats bland aktiva annonser.</p>
             </div>
+
+            {isLoggedIn && userRole === 'privatperson' && (
+                <section className="p-5 mb-8 border rounded-2xl border-accent/20 bg-accent/5">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                        <h2 className="text-sm font-bold tracking-[0.08em] uppercase text-text-main">
+                            AI-matchade annonser
+                        </h2>
+                        <span className="text-xs text-text-dim">Powered by Groq + fallback</span>
+                    </div>
+
+                    {isRecommendationsLoading && (
+                        <p className="text-sm text-text-dim">Tar fram rekommendationer...</p>
+                    )}
+
+                    {!isRecommendationsLoading && recommendationsError && (
+                        <p className="text-sm text-text-dim">
+                            Rekommendationer kunde inte laddas just nu: {recommendationsError}
+                        </p>
+                    )}
+
+                    {!isRecommendationsLoading && !recommendationsError && recommendedAds.length === 0 && (
+                        <p className="text-sm text-text-dim">
+                            Inga rekommendationer ännu. Fyll gärna i mer i din profil för bättre träffar.
+                        </p>
+                    )}
+
+                    {!isRecommendationsLoading && recommendedAds.length > 0 && (
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                            {recommendedAds
+                                .filter((recommendation) => recommendation?.job_ad?.id)
+                                .map((recommendation) => (
+                                <RecommendationStripCard
+                                    key={recommendation.job_ad.id}
+                                    recommendation={recommendation}
+                                    to={getAdTarget(recommendation.job_ad.id)}
+                                />
+                                ))}
+                        </div>
+                    )}
+                </section>
+            )}
 
             <div className="grid gap-4 mb-8 lg:grid-cols-[1.2fr_0.8fr]">
                 <div className="relative">

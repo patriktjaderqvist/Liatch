@@ -254,12 +254,9 @@ export default function AnsokningarPage() {
             </div>
 
             <section className="p-5 mb-8 border rounded-2xl border-accent/20 bg-accent/5">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                    <h2 className="text-sm font-bold tracking-[0.08em] uppercase text-text-main">
-                        Rekommenderade profiler
-                    </h2>
-                    <span className="text-xs text-text-dim">Powered by Groq + fallback</span>
-                </div>
+                <h2 className="mb-3 text-sm font-bold tracking-[0.08em] uppercase text-text-main">
+                    Rekommenderade profiler · Powered by Groq + fallback
+                </h2>
 
                 {isRecommendationsLoading && (
                     <p className="text-sm text-text-dim">Tar fram rekommendationer...</p>
@@ -273,7 +270,7 @@ export default function AnsokningarPage() {
 
                 {!isRecommendationsLoading && !recommendationsError && recommendedStudents.length === 0 && (
                     <p className="text-sm text-text-dim">
-                        Inga profiler att rekommendera just nu.
+                        Inga sökande att ranka ännu för den här annonsen.
                     </p>
                 )}
 

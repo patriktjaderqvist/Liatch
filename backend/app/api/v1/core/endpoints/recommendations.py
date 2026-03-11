@@ -26,20 +26,49 @@ _COMMON_TERMS = {
     "developer",
     "utvecklare",
     "roll",
-    "team",
     "arbete",
     "och",
     "med",
+    "with",
+    "using",
+    "use",
+    "via",
+    "inom",
+    "hos",
+    "for",
+    "in",
+    "on",
+    "to",
+    "av",
+    "på",
+    "under",
+    "över",
+    "som",
+    "att",
+    "det",
+    "den",
+    "ett",
+    "en",
+    "your",
+    "you",
+    "the",
+    "a",
+    "an",
     "for",
     "för",
-    "som",
-    "the",
-    "you",
-    "your",
-    "det",
-    "att",
 }
 _MAX_PREFILTER = 24
+_SOFT_SKILL_TERMS = {
+    "team",
+    "teams",
+    "teamwork",
+    "collaboration",
+    "collaborative",
+    "samarbete",
+    "samarbeta",
+    "kommunikation",
+    "communication",
+}
 
 
 def _tokenize(value: str | None) -> set[str]:
@@ -77,6 +106,12 @@ def _short_reason_list(reasons: list[str], fallback: str) -> list[str]:
     return clean[:3]
 
 
+def _split_overlap_terms(shared_terms: list[str]) -> tuple[list[str], list[str]]:
+    hard_terms = [term for term in shared_terms if term not in _SOFT_SKILL_TERMS]
+    soft_terms = [term for term in shared_terms if term in _SOFT_SKILL_TERMS]
+    return hard_terms, soft_terms
+
+
 def _score_job_ad_for_student(student: Student, ad: JobAd) -> tuple[int, list[str]]:
     score = 18
     reasons: list[str] = []
@@ -91,9 +126,13 @@ def _score_job_ad_for_student(student: Student, ad: JobAd) -> tuple[int, list[st
     program_terms = _tokenize(student.program)
     ad_terms = _tokenize(f"{ad.title} {ad.description}")
     shared_terms = sorted(program_terms & ad_terms)
-    if shared_terms:
-        score += min(22, len(shared_terms) * 7)
-        reasons.append(f"Annonsen matchar ditt program: {', '.join(shared_terms[:3])}.")
+    hard_terms, soft_terms = _split_overlap_terms(shared_terms)
+    if hard_terms:
+        score += min(22, len(hard_terms) * 7)
+        reasons.append(f"Annonsen matchar ditt program: {', '.join(hard_terms[:3])}.")
+    if soft_terms:
+        score += min(6, len(soft_terms) * 3)
+        reasons.append(f"Mjuk kompetens överlappar: {', '.join(soft_terms[:2])}.")
 
     city = student.profile.city if student.profile else None
     if _is_city_match(city, ad.location):
@@ -137,9 +176,13 @@ def _score_student_for_job_ad(student: Student, ad: JobAd) -> tuple[int, list[st
     profile_terms = _tokenize(profile_text)
     ad_terms = _tokenize(f"{ad.title} {ad.description}")
     shared_terms = sorted(profile_terms & ad_terms)
-    if shared_terms:
-        score += min(24, len(shared_terms) * 8)
-        reasons.append(f"Profiltext matchar annonsen: {', '.join(shared_terms[:3])}.")
+    hard_terms, soft_terms = _split_overlap_terms(shared_terms)
+    if hard_terms:
+        score += min(24, len(hard_terms) * 8)
+        reasons.append(f"Profiltext matchar annonsen: {', '.join(hard_terms[:3])}.")
+    if soft_terms:
+        score += min(8, len(soft_terms) * 4)
+        reasons.append(f"Mjuk kompetens matchar: {', '.join(soft_terms[:2])}.")
 
     city = student.profile.city if student.profile else None
     if _is_city_match(city, ad.location):
@@ -204,7 +247,11 @@ def _call_groq_reranker(
         "Du är en matchningsmotor för en LIA-plattform. "
         "Returnera ENDAST giltig JSON i formatet "
         '{"ranked":[{"id":1,"score":0-100,"reasons":["kort motivering 1","kort motivering 2"]}]}. '
-        "Behåll bara id:n som finns i candidates. reasons ska vara på svenska och max 3 per post."
+        "Behåll bara id:n som finns i candidates. reasons ska vara på svenska och max 3 per post. "
+        "Ignorera utfyllnadsord/funktionsord (ex: med/with/och/and/the/att/to) om de inte ingår i en meningsfull fras. "
+        "Vikta explicit kompetens, teknik, taggar och rollmatch högst. "
+        "Vikta mjuka kompetenser lägre men inkludera dem när de uttryckligen efterfrågas och nämns (ex: team/teamwork/samarbete/collaboration). "
+        "Ge inte hög score baserat på generiska ord utan kontext."
     )
     user_prompt = json.dumps(payload, ensure_ascii=False)
     endpoint = "https://api.groq.com/openai/v1/chat/completions"
@@ -416,26 +463,30 @@ def recommend_students_for_job_ad(
             detail="Annonsen hittades inte.",
         )
 
-    applied_student_ids = set(
-        db.scalars(
-            select(Application.student_id).where(Application.job_ad_id == job_ad_id)
-        ).all()
-    )
-
-    students = db.scalars(
-        select(Student)
-        .options(
-            selectinload(Student.profile),
-            selectinload(Student.school),
-            selectinload(Student.tags),
+    applications = db.scalars(
+        select(Application)
+        .where(
+            Application.job_ad_id == job_ad_id,
+            Application.status != ApplicationStatus.WITHDRAWN,
         )
-        .order_by(Student.created_at.desc())
+        .options(
+            selectinload(Application.student).selectinload(Student.profile),
+            selectinload(Application.student).selectinload(Student.school),
+            selectinload(Application.student).selectinload(Student.tags),
+        )
+        .order_by(Application.created_at.desc())
     ).all()
 
     candidates: list[dict[str, Any]] = []
-    for student in students:
-        if student.id in applied_student_ids:
+    seen_student_ids: set[int] = set()
+    for application in applications:
+        student = application.student
+        if not student:
             continue
+        if student.id in seen_student_ids:
+            continue
+        seen_student_ids.add(student.id)
+
         base_score, base_reasons = _score_student_for_job_ad(student, job_ad)
         candidates.append(
             {

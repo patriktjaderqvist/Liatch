@@ -1,0 +1,26 @@
+# Local development helper: spins up Postgres on port 5455 so you can run
+# `uvicorn` and `npm run dev` natively against it.
+#
+# Production on hertznet does NOT use this file — it uses the compose file
+# at /srv/projects/liatch/docker-compose.yml on the server, which pulls the
+# image from GHCR.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: liatch
+      POSTGRES_PASSWORD: liatch
+      POSTGRES_DB: liatch
+    ports:
+      - "5455:5432"
+    volumes:
+      - liatch_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U liatch -d liatch"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  liatch_db:

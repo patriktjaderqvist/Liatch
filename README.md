@@ -123,6 +123,37 @@ npm run dev
 # VITE_API_BASE_URL=http://localhost:8000 npm run dev
 ```
 
+## Deploy med Docker (hertznet, liatch.com)
+
+Den containeriserade vägen används för liatch.com och bygger om sig själv via
+GitHub Actions varje gång du pushar till `main` eller `dev`:
+
+1. Workflowen i `.github/workflows/deploy.yml` bygger en multi-stage image
+   (Node bygger frontend → Python serverar både `/api/v1/...` och den
+   byggda Vite-bundeln) och pushar till `ghcr.io/patriktjaderqvist/liatch`.
+2. SSH-steget loggar in på hertznet (`46.62.204.181`), pullar imagen och
+   kör `docker compose up -d` mot `/srv/projects/liatch/docker-compose.yml`.
+
+För att förbereda servern första gången:
+
+```bash
+ssh deploy@46.62.204.181
+sudo mkdir -p /srv/projects/liatch
+sudo chown deploy:deploy /srv/projects/liatch
+cd /srv/projects/liatch
+
+# Kopiera infra/server-compose.example.yml som docker-compose.yml
+# Kopiera infra/server.env.example som .env och fyll i värden
+# Lägg till en liatch.com-block i Caddyfile som proxy_pass:ar till
+#   app-containern på det interna nätverket
+```
+
+Workflowen behöver dessa repo-secrets:
+- `SSH_HOST` – `46.62.204.181`
+- `SSH_USER` – `deploy`
+- `SSH_PRIVATE_KEY` – privata nyckeln vars publika motsvarighet ligger i
+  `deploy`-användarens `authorized_keys`
+
 ## Deploy på EC2 (24/7-miljö)
 
 Använd deploy-scriptet i projektroten för att:

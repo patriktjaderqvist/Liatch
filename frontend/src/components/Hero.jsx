@@ -35,12 +35,7 @@ export default function Hero() {
     return (
         <section className="min-h-screen relative flex items-center justify-center pt-20 overflow-hidden">
             {/* Ambient Background */}
-            <div className="absolute inset-0 bg-bg-void transition-colors duration-500">
-                <div className="absolute inset-0 bg-grid-pattern bg-[length:60px_60px] opacity-20 mask-radial-fade"></div>
-                {/* Glow Orbs */}
-                <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[120px] animate-float-slow"></div>
-                <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-blue-600/5 rounded-full blur-[100px] animate-float-slow" style={{ animationDelay: '-4s' }}></div>
-            </div>
+            <div className="absolute inset-0 bg-bg-void transition-colors duration-500"></div>
 
             {/* Content */}
             <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">

@@ -114,6 +114,11 @@ export default function Navbar() {
                             <span className="text-2xl font-bold tracking-tight font-display text-text-main">Liatch<span className="text-accent">.</span></span>
                         </Link>
 
+                        {/* Nav Tabs (desktop) */}
+                        <div className="items-center hidden md:flex gap-x-6">
+                            {renderNavItems()}
+                        </div>
+
                         {/* Actions */}
                         <div className="flex items-center gap-3 sm:gap-4">
                             {!userRole ? (
@@ -139,8 +144,8 @@ export default function Navbar() {
                         </div>
                     </div>
 
-                    {/* Nav Tabs (all breakpoints) */}
-                    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-3 mt-3 border-t border-fg/10">
+                    {/* Nav Tabs (mobile) */}
+                    <div className="flex flex-wrap items-center justify-center pt-3 mt-3 border-t md:hidden gap-x-6 gap-y-2 border-fg/10">
                         {renderNavItems()}
                     </div>
                 </div>

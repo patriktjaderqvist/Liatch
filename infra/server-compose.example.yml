@@ -1,45 +1,41 @@
 # Production docker-compose for hertznet.
 #
-# Copy to /srv/projects/liatch/docker-compose.yml on the server, alongside an
-# `.env` file (template at backend/.env.example). Caddy on the host reverse-
-# proxies https://liatch.com to the `app` container on the internal docker
-# network — no host port mapping needed.
+# Copy to /srv/projects/liatch/docker-compose.yml on the server alongside an
+# `.env` (template at infra/server.env.example). Caddy on the host joins the
+# external `web` network and reverse-proxies https://liatch.com to the
+# liatch-web container on port 8000 — no host port mapping needed.
 
 services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_USER: liatch
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB: liatch
     volumes:
       - liatch_db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ["CMD-SHELL", "pg_isready -U liatch -d liatch"]
       interval: 5s
       timeout: 5s
       retries: 10
 
-  app:
+  web:
+    container_name: liatch-web
     image: ghcr.io/patriktjaderqvist/liatch:latest
     restart: unless-stopped
+    env_file: .env
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      DB_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      SECRET_KEY: ${SECRET_KEY}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-10080}
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
-      GROQ_MODEL: ${GROQ_MODEL:-llama-3.1-8b-instant}
     networks:
       - default
-      - caddy
-
-networks:
-  caddy:
-    external: true
+      - web
 
 volumes:
   liatch_db:
+
+networks:
+  web:
+    external: true

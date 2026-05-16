@@ -50,5 +50,6 @@ ENV PYTHONUNBUFFERED=1 \
 USER liatch
 EXPOSE 8000
 
-# Apply migrations on every start (idempotent), then serve.
-CMD ["sh", "-c", "alembic upgrade head && exec uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*"]
+# Apply migrations on every start (idempotent). When SEED_ON_START=1, also
+# run the seed module — seed() upserts rows so re-runs are safe. Then serve.
+CMD ["sh", "-c", "alembic upgrade head && { [ \"${SEED_ON_START:-0}\" = \"1\" ] && python -m app.seed || true; } && exec uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*"]

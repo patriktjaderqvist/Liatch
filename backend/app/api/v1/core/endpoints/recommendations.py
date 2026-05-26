@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import math
 import re
+from collections import Counter
 from typing import Any
 
 import httpx
@@ -78,6 +80,29 @@ def _tokenize(value: str | None) -> set[str]:
     return {token for token in tokens if len(token) >= 3 and token not in _COMMON_TERMS}
 
 
+def _build_idf(documents: list[str]) -> dict[str, float]:
+    """Inverse document frequency over the corpus.
+
+    Higher value = the token appears in fewer documents = more distinctive.
+    A token that shows up in every ad (React, SQL, Python in a tech-heavy DB)
+    gets a weight near 1.0; a token that shows up in one ad (LangGraph, Deribit)
+    gets a much higher weight. Used to stop common-keyword bingo from beating
+    specialised matches.
+    """
+    if not documents:
+        return {}
+    n = len(documents)
+    df: Counter[str] = Counter()
+    for doc in documents:
+        for token in _tokenize(doc):
+            df[token] += 1
+    return {token: math.log((1 + n) / (1 + count)) + 1.0 for token, count in df.items()}
+
+
+def _idf_weight(idf: dict[str, float], token: str) -> float:
+    return idf.get(token, 1.0)
+
+
 def _is_city_match(student_city: str | None, ad_location: str | None) -> bool:
     if not student_city or not ad_location:
         return False
@@ -112,27 +137,44 @@ def _split_overlap_terms(shared_terms: list[str]) -> tuple[list[str], list[str]]
     return hard_terms, soft_terms
 
 
-def _score_job_ad_for_student(student: Student, ad: JobAd) -> tuple[int, list[str]]:
+def _score_job_ad_for_student(
+    student: Student, ad: JobAd, idf: dict[str, float]
+) -> tuple[int, list[str]]:
     score = 18
     reasons: list[str] = []
 
     student_tags = {tag.name.lower() for tag in student.tags}
     ad_tags = {tag.name.lower() for tag in ad.tags}
-    shared_tags = sorted(student_tags & ad_tags)
+    shared_tags = student_tags & ad_tags
     if shared_tags:
-        score += min(42, len(shared_tags) * 14)
-        reasons.append(f"Gemensamma kompetenser: {', '.join(shared_tags[:3])}.")
+        tag_weight = sum(_idf_weight(idf, t) for t in shared_tags)
+        score += int(min(50, round(tag_weight * 14)))
+        ranked_tags = sorted(shared_tags, key=lambda t: -_idf_weight(idf, t))
+        reasons.append(f"Gemensamma kompetenser: {', '.join(ranked_tags[:3])}.")
 
-    program_terms = _tokenize(student.program)
+    profile_text = " ".join(
+        part
+        for part in [
+            student.program,
+            student.profile.headline if student.profile else None,
+            student.profile.bio if student.profile else None,
+        ]
+        if part
+    )
+    program_terms = _tokenize(profile_text)
     ad_terms = _tokenize(f"{ad.title} {ad.description}")
-    shared_terms = sorted(program_terms & ad_terms)
-    hard_terms, soft_terms = _split_overlap_terms(shared_terms)
-    if hard_terms:
-        score += min(22, len(hard_terms) * 7)
-        reasons.append(f"Annonsen matchar ditt program: {', '.join(hard_terms[:3])}.")
-    if soft_terms:
-        score += min(6, len(soft_terms) * 3)
-        reasons.append(f"Mjuk kompetens överlappar: {', '.join(soft_terms[:2])}.")
+    shared_terms = program_terms & ad_terms
+    hard_terms_set = shared_terms - _SOFT_SKILL_TERMS
+    soft_terms_set = shared_terms & _SOFT_SKILL_TERMS
+    if hard_terms_set:
+        hard_weight = sum(_idf_weight(idf, t) for t in hard_terms_set)
+        score += int(min(32, round(hard_weight * 5)))
+        ranked_hard = sorted(hard_terms_set, key=lambda t: -_idf_weight(idf, t))
+        reasons.append(f"Annonsen matchar din profil: {', '.join(ranked_hard[:3])}.")
+    if soft_terms_set:
+        soft_weight = sum(_idf_weight(idf, t) for t in soft_terms_set)
+        score += int(min(6, round(soft_weight * 3)))
+        reasons.append(f"Mjuk kompetens överlappar: {', '.join(sorted(soft_terms_set)[:2])}.")
 
     city = student.profile.city if student.profile else None
     if _is_city_match(city, ad.location):
@@ -153,16 +195,20 @@ def _score_job_ad_for_student(student: Student, ad: JobAd) -> tuple[int, list[st
     return _clamp_score(score), _short_reason_list(reasons, "Grundmatchning på profil och annons.")
 
 
-def _score_student_for_job_ad(student: Student, ad: JobAd) -> tuple[int, list[str]]:
+def _score_student_for_job_ad(
+    student: Student, ad: JobAd, idf: dict[str, float]
+) -> tuple[int, list[str]]:
     score = 16
     reasons: list[str] = []
 
     student_tags = {tag.name.lower() for tag in student.tags}
     ad_tags = {tag.name.lower() for tag in ad.tags}
-    shared_tags = sorted(student_tags & ad_tags)
+    shared_tags = student_tags & ad_tags
     if shared_tags:
-        score += min(48, len(shared_tags) * 16)
-        reasons.append(f"Gemensamma kompetenser: {', '.join(shared_tags[:3])}.")
+        tag_weight = sum(_idf_weight(idf, t) for t in shared_tags)
+        score += int(min(55, round(tag_weight * 16)))
+        ranked_tags = sorted(shared_tags, key=lambda t: -_idf_weight(idf, t))
+        reasons.append(f"Gemensamma kompetenser: {', '.join(ranked_tags[:3])}.")
 
     profile_text = " ".join(
         part
@@ -175,14 +221,18 @@ def _score_student_for_job_ad(student: Student, ad: JobAd) -> tuple[int, list[st
     )
     profile_terms = _tokenize(profile_text)
     ad_terms = _tokenize(f"{ad.title} {ad.description}")
-    shared_terms = sorted(profile_terms & ad_terms)
-    hard_terms, soft_terms = _split_overlap_terms(shared_terms)
-    if hard_terms:
-        score += min(24, len(hard_terms) * 8)
-        reasons.append(f"Profiltext matchar annonsen: {', '.join(hard_terms[:3])}.")
-    if soft_terms:
-        score += min(8, len(soft_terms) * 4)
-        reasons.append(f"Mjuk kompetens matchar: {', '.join(soft_terms[:2])}.")
+    shared_terms = profile_terms & ad_terms
+    hard_terms_set = shared_terms - _SOFT_SKILL_TERMS
+    soft_terms_set = shared_terms & _SOFT_SKILL_TERMS
+    if hard_terms_set:
+        hard_weight = sum(_idf_weight(idf, t) for t in hard_terms_set)
+        score += int(min(34, round(hard_weight * 6)))
+        ranked_hard = sorted(hard_terms_set, key=lambda t: -_idf_weight(idf, t))
+        reasons.append(f"Profiltext matchar annonsen: {', '.join(ranked_hard[:3])}.")
+    if soft_terms_set:
+        soft_weight = sum(_idf_weight(idf, t) for t in soft_terms_set)
+        score += int(min(8, round(soft_weight * 4)))
+        reasons.append(f"Mjuk kompetens matchar: {', '.join(sorted(soft_terms_set)[:2])}.")
 
     city = student.profile.city if student.profile else None
     if _is_city_match(city, ad.location):
@@ -248,10 +298,12 @@ def _call_groq_reranker(
         "Returnera ENDAST giltig JSON i formatet "
         '{"ranked":[{"id":1,"score":0-100,"reasons":["kort motivering 1","kort motivering 2"]}]}. '
         "Behåll bara id:n som finns i candidates. reasons ska vara på svenska och max 3 per post. "
-        "Ignorera utfyllnadsord/funktionsord (ex: med/with/och/and/the/att/to) om de inte ingår i en meningsfull fras. "
-        "Vikta explicit kompetens, teknik, taggar och rollmatch högst. "
+        "Värdera helheten i hur likartad typen av arbete är, inte bara antalet delade nyckelord. "
+        "Två texter som handlar om samma sorts roll och domän ska få mycket högre score än två texter som råkar dela några generiska ord men handlar om olika saker. "
+        "Specialiserade nyckelord (specifika ramverk, plattformar, domäner, metoder) är starkare matchningssignaler än vanliga tech-ord som finns i nästan alla annonser. "
+        "Ignorera utfyllnadsord/funktionsord (ex: med/with/och/and/the/att/to). "
         "Vikta mjuka kompetenser lägre men inkludera dem när de uttryckligen efterfrågas och nämns (ex: team/teamwork/samarbete/collaboration). "
-        "Ge inte hög score baserat på generiska ord utan kontext."
+        "Ge inte hög score baserat på generiska ord utan kontext — om en kandidat bara delar generiska tech-ord med subject men handlar om en helt annan typ av roll, sätt score lågt (under 50)."
     )
     user_prompt = json.dumps(payload, ensure_ascii=False)
     endpoint = "https://api.groq.com/openai/v1/chat/completions"
@@ -388,11 +440,18 @@ def recommend_job_ads_for_me(
         .order_by(JobAd.created_at.desc())
     ).all()
 
+    idf = _build_idf(
+        [
+            f"{ad.title} {ad.description} {' '.join(tag.name for tag in ad.tags)}"
+            for ad in ads
+        ]
+    )
+
     candidates: list[dict[str, Any]] = []
     for ad in ads:
         if ad.id in applied_ids:
             continue
-        base_score, base_reasons = _score_job_ad_for_student(student, ad)
+        base_score, base_reasons = _score_job_ad_for_student(student, ad, idf)
         candidates.append(
             {
                 "id": ad.id,
@@ -409,7 +468,7 @@ def recommend_job_ads_for_me(
         {
             "id": item["id"],
             "title": item["job_ad"].title,
-            "description": item["job_ad"].description[:500],
+            "description": item["job_ad"].description[:1200],
             "location": item["job_ad"].location,
             "employment_type": item["job_ad"].employment_type,
             "remote": item["job_ad"].remote,
@@ -425,6 +484,7 @@ def recommend_job_ads_for_me(
             "program": student.program,
             "city": student.profile.city if student.profile else None,
             "headline": student.profile.headline if student.profile else None,
+            "bio": (student.profile.bio[:1200] if student.profile and student.profile.bio else None),
             "tags": [tag.name for tag in student.tags],
         },
         candidates=groq_candidates,
@@ -477,6 +537,18 @@ def recommend_students_for_job_ad(
         .order_by(Application.created_at.desc())
     ).all()
 
+    corpus_ads = db.scalars(
+        select(JobAd)
+        .where(JobAd.is_active == True)
+        .options(selectinload(JobAd.tags))
+    ).all()
+    idf = _build_idf(
+        [
+            f"{ad.title} {ad.description} {' '.join(tag.name for tag in ad.tags)}"
+            for ad in corpus_ads
+        ]
+    )
+
     candidates: list[dict[str, Any]] = []
     seen_student_ids: set[int] = set()
     for application in applications:
@@ -487,7 +559,7 @@ def recommend_students_for_job_ad(
             continue
         seen_student_ids.add(student.id)
 
-        base_score, base_reasons = _score_student_for_job_ad(student, job_ad)
+        base_score, base_reasons = _score_student_for_job_ad(student, job_ad, idf)
         candidates.append(
             {
                 "id": student.id,
@@ -507,7 +579,7 @@ def recommend_students_for_job_ad(
             "last_name": item["student"].last_name,
             "program": item["student"].program,
             "headline": item["student"].profile.headline if item["student"].profile else None,
-            "bio": (item["student"].profile.bio[:500] if item["student"].profile and item["student"].profile.bio else None),
+            "bio": (item["student"].profile.bio[:1200] if item["student"].profile and item["student"].profile.bio else None),
             "city": item["student"].profile.city if item["student"].profile else None,
             "tags": [tag.name for tag in item["student"].tags],
             "base_score": item["base_score"],

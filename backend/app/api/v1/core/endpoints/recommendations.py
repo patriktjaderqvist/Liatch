@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import json
 import math
 import re
 from collections import Counter
 from typing import Any
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -15,7 +13,6 @@ from app.api.v1.core.models import Application, ApplicationStatus, JobAd, Studen
 from app.api.v1.core.schemas import JobAdRecommendationSchema, StudentRecommendationSchema
 from app.db_setup import get_db
 from app.security import get_current_user
-from app.settings import settings
 
 router = APIRouter(tags=["recommendations"], prefix="/recommendations")
 
@@ -59,7 +56,6 @@ _COMMON_TERMS = {
     "for",
     "för",
 }
-_MAX_PREFILTER = 50
 _MIN_RELEVANCE_SCORE = 40
 _SOFT_SKILL_TERMS = {
     "team",
@@ -104,6 +100,49 @@ def _idf_weight(idf: dict[str, float], token: str) -> float:
     return idf.get(token, 1.0)
 
 
+def _build_vector(text: str | None, idf: dict[str, float]) -> dict[str, float]:
+    """Build a TF-IDF weighted bag-of-words vector for one piece of text.
+
+    TF uses sublinear scaling (1 + log(count)) so repeated tokens don't dominate.
+    IDF is looked up from the corpus map. Tokens that didn't appear in the corpus
+    default to weight 1.0.
+    """
+    if not text:
+        return {}
+    tokens = [
+        token.lower()
+        for token in _TOKEN_RE.findall(text)
+        if len(token) >= 3 and token.lower() not in _COMMON_TERMS
+    ]
+    if not tokens:
+        return {}
+    tf: Counter[str] = Counter(tokens)
+    return {
+        token: (1.0 + math.log(count)) * idf.get(token, 1.0)
+        for token, count in tf.items()
+    }
+
+
+def _cosine_similarity(v1: dict[str, float], v2: dict[str, float]) -> float:
+    """Cosine similarity between two sparse TF-IDF vectors.
+
+    Returns a value in [0, 1] — 0 means no shared content, 1 means identical
+    TF-IDF profile. Real-world matches tend to cluster around 0.05–0.40, so
+    callers should rescale before reporting as a percentage.
+    """
+    if not v1 or not v2:
+        return 0.0
+    common = set(v1) & set(v2)
+    if not common:
+        return 0.0
+    dot = sum(v1[k] * v2[k] for k in common)
+    norm1 = math.sqrt(sum(x * x for x in v1.values()))
+    norm2 = math.sqrt(sum(x * x for x in v2.values()))
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+    return dot / (norm1 * norm2)
+
+
 def _is_city_match(student_city: str | None, ad_location: str | None) -> bool:
     if not student_city or not ad_location:
         return False
@@ -112,13 +151,6 @@ def _is_city_match(student_city: str | None, ad_location: str | None) -> bool:
     if not left or not right:
         return False
     return left in right or right in left
-
-
-def _safe_int(value: Any, *, default: int) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
 
 
 def _clamp_score(score: int) -> int:
@@ -132,294 +164,172 @@ def _short_reason_list(reasons: list[str], fallback: str) -> list[str]:
     return clean[:3]
 
 
-def _split_overlap_terms(shared_terms: list[str]) -> tuple[list[str], list[str]]:
-    hard_terms = [term for term in shared_terms if term not in _SOFT_SKILL_TERMS]
-    soft_terms = [term for term in shared_terms if term in _SOFT_SKILL_TERMS]
-    return hard_terms, soft_terms
+def _content_text_for_student(student: Student) -> str:
+    """Concatenate the student's free-text content. The program field is
+    repeated so its tokens count more than the body of the bio."""
+    parts = [
+        student.program,
+        student.program,
+        student.profile.headline if student.profile else None,
+        student.profile.bio if student.profile else None,
+    ]
+    return " ".join(p for p in parts if p)
+
+
+def _content_text_for_ad(ad: JobAd) -> str:
+    """Concatenate ad text. Title is repeated so role keywords outweigh body."""
+    return " ".join(part for part in [ad.title, ad.title, ad.description] if part)
+
+
+def _score_match(
+    *,
+    subject_text: str,
+    candidate_text: str,
+    subject_tags: set[str],
+    candidate_tags: set[str],
+    idf: dict[str, float],
+    location_match: bool,
+    candidate_remote: bool,
+    is_lia_role: bool,
+    subject_label: str,
+) -> tuple[int, list[str]]:
+    """TF-IDF cosine similarity + explicit signal boosts.
+
+    Returns (score 0-100, reasons list). The cosine value is rescaled with sqrt
+    so middling raw similarities (which dominate real-world text) end up in a
+    useful 30-80 range before boosts are added.
+    """
+    reasons: list[str] = []
+
+    subject_vec = _build_vector(subject_text, idf)
+    candidate_vec = _build_vector(candidate_text, idf)
+    similarity = _cosine_similarity(subject_vec, candidate_vec)
+
+    # sqrt() pulls real-world cosine values (typically 0.05-0.40 for relevant
+    # matches) into a useful 0.22-0.63 band, then * 95 turns it into a 20-60
+    # base. Strong matches with shared specialised vocabulary will push higher.
+    base = int(round(math.sqrt(similarity) * 95))
+
+    # Surface the most distinctive shared terms — the ones that actually
+    # drove the similarity score — so the reason text is informative.
+    shared_terms = set(subject_vec) & set(candidate_vec)
+    distinctive = [
+        t for t in shared_terms
+        if _idf_weight(idf, t) >= 1.3 and t not in _SOFT_SKILL_TERMS
+    ]
+    if distinctive:
+        ranked = sorted(distinctive, key=lambda t: -_idf_weight(idf, t))[:3]
+        reasons.append(f"{subject_label}: {', '.join(ranked)}.")
+
+    soft_matches = shared_terms & _SOFT_SKILL_TERMS
+    if soft_matches and len(reasons) < 3:
+        reasons.append(
+            f"Mjuk kompetens överlappar: {', '.join(sorted(soft_matches)[:2])}."
+        )
+
+    boost = 0
+
+    # Explicit tag overlap is a strong signal even when text TF-IDF is thin.
+    shared_tags = subject_tags & candidate_tags
+    if shared_tags:
+        tag_weight = sum(_idf_weight(idf, t) for t in shared_tags)
+        boost += int(min(18, round(tag_weight * 5)))
+        ranked_tags = sorted(shared_tags, key=lambda t: -_idf_weight(idf, t))
+        reasons.append(f"Gemensamma kompetenser: {', '.join(ranked_tags[:3])}.")
+
+    # Location
+    if location_match:
+        boost += 7
+        reasons.append("Samma ort.")
+    elif candidate_remote:
+        boost += 3
+        reasons.append("Distansarbete är möjligt.")
+
+    # LIA-flagged role
+    if is_lia_role:
+        boost += 3
+
+    if not reasons:
+        reasons.append("Lite gemensamt innehåll.")
+
+    return _clamp_score(base + boost), _short_reason_list(
+        reasons, "Grundmatchning på innehåll."
+    )
 
 
 def _score_job_ad_for_student(
     student: Student, ad: JobAd, idf: dict[str, float]
 ) -> tuple[int, list[str]]:
-    score = 18
-    reasons: list[str] = []
-
-    student_tags = {tag.name.lower() for tag in student.tags}
-    ad_tags = {tag.name.lower() for tag in ad.tags}
-    shared_tags = student_tags & ad_tags
-    if shared_tags:
-        tag_weight = sum(_idf_weight(idf, t) for t in shared_tags)
-        score += int(min(50, round(tag_weight * 14)))
-        ranked_tags = sorted(shared_tags, key=lambda t: -_idf_weight(idf, t))
-        reasons.append(f"Gemensamma kompetenser: {', '.join(ranked_tags[:3])}.")
-
-    profile_text = " ".join(
-        part
-        for part in [
-            student.program,
-            student.profile.headline if student.profile else None,
-            student.profile.bio if student.profile else None,
-        ]
-        if part
+    student_city = student.profile.city if student.profile else None
+    return _score_match(
+        subject_text=_content_text_for_student(student),
+        candidate_text=_content_text_for_ad(ad),
+        subject_tags={tag.name.lower() for tag in student.tags},
+        candidate_tags={tag.name.lower() for tag in ad.tags},
+        idf=idf,
+        location_match=_is_city_match(student_city, ad.location),
+        candidate_remote=bool(ad.remote),
+        is_lia_role="lia" in (ad.employment_type or "").lower(),
+        subject_label="Matchar din profil",
     )
-    program_terms = _tokenize(profile_text)
-    ad_terms = _tokenize(f"{ad.title} {ad.description}")
-    shared_terms = program_terms & ad_terms
-    hard_terms_set = shared_terms - _SOFT_SKILL_TERMS
-    soft_terms_set = shared_terms & _SOFT_SKILL_TERMS
-    if hard_terms_set:
-        hard_weight = sum(_idf_weight(idf, t) for t in hard_terms_set)
-        score += int(min(32, round(hard_weight * 5)))
-        ranked_hard = sorted(hard_terms_set, key=lambda t: -_idf_weight(idf, t))
-        reasons.append(f"Annonsen matchar din profil: {', '.join(ranked_hard[:3])}.")
-    if soft_terms_set:
-        soft_weight = sum(_idf_weight(idf, t) for t in soft_terms_set)
-        score += int(min(6, round(soft_weight * 3)))
-        reasons.append(f"Mjuk kompetens överlappar: {', '.join(sorted(soft_terms_set)[:2])}.")
-
-    city = student.profile.city if student.profile else None
-    if _is_city_match(city, ad.location):
-        score += 14
-        reasons.append("Ort matchar din profil.")
-    elif ad.remote:
-        score += 8
-        reasons.append("Distansarbete är möjligt.")
-
-    employment_type = (ad.employment_type or "").lower()
-    if "lia" in employment_type:
-        score += 6
-        reasons.append("Annonsen är tydligt inriktad på LIA.")
-
-    if not reasons:
-        reasons.append("Profil och annons har överlapp i innehåll.")
-
-    return _clamp_score(score), _short_reason_list(reasons, "Grundmatchning på profil och annons.")
 
 
 def _score_student_for_job_ad(
     student: Student, ad: JobAd, idf: dict[str, float]
 ) -> tuple[int, list[str]]:
-    score = 16
-    reasons: list[str] = []
-
-    student_tags = {tag.name.lower() for tag in student.tags}
-    ad_tags = {tag.name.lower() for tag in ad.tags}
-    shared_tags = student_tags & ad_tags
-    if shared_tags:
-        tag_weight = sum(_idf_weight(idf, t) for t in shared_tags)
-        score += int(min(55, round(tag_weight * 16)))
-        ranked_tags = sorted(shared_tags, key=lambda t: -_idf_weight(idf, t))
-        reasons.append(f"Gemensamma kompetenser: {', '.join(ranked_tags[:3])}.")
-
-    profile_text = " ".join(
-        part
-        for part in [
-            student.program,
-            student.profile.headline if student.profile else None,
-            student.profile.bio if student.profile else None,
-        ]
-        if part
+    student_city = student.profile.city if student.profile else None
+    score, reasons = _score_match(
+        subject_text=_content_text_for_ad(ad),
+        candidate_text=_content_text_for_student(student),
+        subject_tags={tag.name.lower() for tag in ad.tags},
+        candidate_tags={tag.name.lower() for tag in student.tags},
+        idf=idf,
+        location_match=_is_city_match(student_city, ad.location),
+        candidate_remote=bool(ad.remote),
+        is_lia_role="lia" in (ad.employment_type or "").lower(),
+        subject_label="Matchar annonsen",
     )
-    profile_terms = _tokenize(profile_text)
-    ad_terms = _tokenize(f"{ad.title} {ad.description}")
-    shared_terms = profile_terms & ad_terms
-    hard_terms_set = shared_terms - _SOFT_SKILL_TERMS
-    soft_terms_set = shared_terms & _SOFT_SKILL_TERMS
-    if hard_terms_set:
-        hard_weight = sum(_idf_weight(idf, t) for t in hard_terms_set)
-        score += int(min(34, round(hard_weight * 6)))
-        ranked_hard = sorted(hard_terms_set, key=lambda t: -_idf_weight(idf, t))
-        reasons.append(f"Profiltext matchar annonsen: {', '.join(ranked_hard[:3])}.")
-    if soft_terms_set:
-        soft_weight = sum(_idf_weight(idf, t) for t in soft_terms_set)
-        score += int(min(8, round(soft_weight * 4)))
-        reasons.append(f"Mjuk kompetens matchar: {', '.join(sorted(soft_terms_set)[:2])}.")
 
-    city = student.profile.city if student.profile else None
-    if _is_city_match(city, ad.location):
-        score += 12
-        reasons.append("Studenten finns i samma ort som annonsen.")
-    elif ad.remote:
-        score += 5
-        reasons.append("Annonsen tillåter distans.")
-
+    # Small bonuses for a well-filled profile — schools/companies trust
+    # candidates more when CV and external links are present.
+    bonus = 0
     if student.profile and student.profile.cv_url:
-        score += 4
+        bonus += 3
         reasons.append("Studenten har publicerat CV.")
     if student.profile and (
-        student.profile.linkedin_url or student.profile.github_url or student.profile.portfolio_url
+        student.profile.linkedin_url
+        or student.profile.github_url
+        or student.profile.portfolio_url
     ):
-        score += 4
+        bonus += 3
         reasons.append("Studenten har publicerade profiler/länkar.")
-
-    if not reasons:
-        reasons.append("Grundmatchning på program och annonsinnehåll.")
-
-    return _clamp_score(score), _short_reason_list(reasons, "Grundmatchning på program och annons.")
+    return _clamp_score(score + bonus), _short_reason_list(
+        reasons, "Grundmatchning på innehåll."
+    )
 
 
-def _parse_json_object(content: str) -> dict[str, Any] | None:
-    try:
-        parsed = json.loads(content)
-        if isinstance(parsed, dict):
-            return parsed
-    except json.JSONDecodeError:
-        pass
-
-    match = re.search(r"\{.*\}", content, flags=re.DOTALL)
-    if not match:
-        return None
-    try:
-        parsed = json.loads(match.group(0))
-    except json.JSONDecodeError:
-        return None
-    return parsed if isinstance(parsed, dict) else None
-
-
-def _call_groq_reranker(
-    *,
-    task: str,
-    subject: dict[str, Any],
+def _build_results(
     candidates: list[dict[str, Any]],
-    limit: int,
-) -> list[dict[str, Any]] | None:
-    if not settings.GROQ_API_KEY:
-        return None
-    if not candidates:
-        return []
-
-    payload = {
-        "task": task,
-        "subject": subject,
-        "candidates": candidates,
-        "limit": limit,
-    }
-    system_prompt = (
-        "Du är en matchningsmotor för en LIA-plattform. "
-        "Returnera ENDAST giltig JSON i formatet "
-        '{"ranked":[{"id":1,"score":0-100,"reasons":["kort motivering 1","kort motivering 2"]}]}. '
-        "Behåll bara id:n som finns i candidates. reasons ska vara på svenska och max 3 per post.\n\n"
-        "ARBETSGÅNG (gör detta internt innan du skriver JSON):\n"
-        "1. Läs subject hela vägen och formulera i ett par ord: vilken specifik domän/nisch och vilken rolltyp handlar det om? "
-        "(t.ex. 'frontend-utveckling', 'autonom AI-handel', 'data engineering', 'UX-design'). "
-        "Var så specifik som texten tillåter — om subject uttryckligen nämner en nisch (t.ex. en specifik bransch, ramverk eller tillämpning) är det nischen som ska driva matchningen.\n"
-        "2. För varje kandidat: formulera på samma sätt vilken nisch/rolltyp den handlar om.\n"
-        "3. Jämför nisch + roll, inte enskilda nyckelord. Två texter som handlar om samma nisch ska få hög score även om ordvalen skiljer sig. Två texter i olika nischer ska få låg score även om de delar generiska ord.\n\n"
-        "SKALA:\n"
-        "85-100: samma specifika nisch OCH samma rolltyp.\n"
-        "65-84: samma bredare domän men en annan nisch eller rolltyp.\n"
-        "40-64: angränsande domäner, vissa delade verktyg, men inte samma typ av arbete.\n"
-        "0-39: olika domäner. Bara ytlig keyword-överlapp räknas inte som match.\n\n"
-        "VIKTIGT:\n"
-        "- Om subject uttryckligen nämner en specialiserad nisch (t.ex. en specifik tillämpning, bransch, ramverk eller teknisk inriktning) ska en kandidat i exakt den nischen alltid ranka högre än kandidater i bredare domäner.\n"
-        "- Generiska tech-ord (React, SQL, Python, JavaScript, Git, API, REST) är svaga signaler. En kandidat som bara delar sådana ord med subject men handlar om annan roll ska få under 40.\n"
-        "- Specialiserade ord och nischade plattformar/ramverk är starka signaler när de förekommer i båda texter.\n"
-        "- Vikta mjuka kompetenser lågt; ta endast med dem när de uttryckligen efterfrågas."
-    )
-    user_prompt = json.dumps(payload, ensure_ascii=False)
-    endpoint = "https://api.groq.com/openai/v1/chat/completions"
-    request_body = {
-        "model": settings.GROQ_MODEL,
-        "temperature": 0.1,
-        "max_tokens": 2500,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        "response_format": {"type": "json_object"},
-    }
-
-    headers = {
-        "Authorization": f"Bearer {settings.GROQ_API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-    try:
-        with httpx.Client(timeout=settings.GROQ_TIMEOUT_SECONDS) as client:
-            response = client.post(endpoint, headers=headers, json=request_body)
-            if response.status_code >= 400 and "response_format" in response.text.lower():
-                fallback_body = dict(request_body)
-                fallback_body.pop("response_format", None)
-                response = client.post(endpoint, headers=headers, json=fallback_body)
-            response.raise_for_status()
-            data = response.json()
-    except Exception:
-        return None
-
-    content = (
-        data.get("choices", [{}])[0]
-        .get("message", {})
-        .get("content", "")
-    )
-    if not isinstance(content, str) or not content.strip():
-        return None
-
-    parsed = _parse_json_object(content)
-    if not parsed:
-        return None
-    ranked = parsed.get("ranked")
-    return ranked if isinstance(ranked, list) else None
-
-
-def _merge_ranked_results(
     *,
-    ranked_by_groq: list[dict[str, Any]] | None,
-    base_candidates: list[dict[str, Any]],
     item_key: str,
     limit: int,
 ) -> list[dict[str, Any]]:
-    candidate_by_id = {candidate["id"]: candidate for candidate in base_candidates}
-    merged: list[dict[str, Any]] = []
-    seen_ids: set[int] = set()
-
-    if ranked_by_groq:
-        for ranked in ranked_by_groq:
-            candidate_id = _safe_int(ranked.get("id"), default=-1)
-            if candidate_id not in candidate_by_id or candidate_id in seen_ids:
-                continue
-            base = candidate_by_id[candidate_id]
-            raw_reasons = ranked.get("reasons")
-            ranked_reasons = raw_reasons if isinstance(raw_reasons, list) else []
-            score = _clamp_score(
-                _safe_int(ranked.get("score"), default=base["base_score"])
-            )
-            # Drop poor matches — if the model rated this below the relevance
-            # threshold it does not belong in a "recommendations" list.
-            if score < _MIN_RELEVANCE_SCORE:
-                seen_ids.add(candidate_id)
-                continue
-            merged.append(
-                {
-                    item_key: base[item_key],
-                    "score": score,
-                    "reasons": _short_reason_list(
-                        ranked_reasons,
-                        base["base_reasons"][0],
-                    ),
-                    "source": "groq",
-                }
-            )
-            seen_ids.add(candidate_id)
-            if len(merged) >= limit:
-                return merged
-
-    for candidate in base_candidates:
-        if candidate["id"] in seen_ids:
-            continue
+    """Drop sub-threshold candidates, take top-N, shape for the response."""
+    results: list[dict[str, Any]] = []
+    for candidate in candidates:
         if candidate["base_score"] < _MIN_RELEVANCE_SCORE:
             continue
-        merged.append(
+        results.append(
             {
                 item_key: candidate[item_key],
                 "score": candidate["base_score"],
                 "reasons": candidate["base_reasons"],
-                "source": "heuristic",
+                "source": "tfidf",
             }
         )
-        if len(merged) >= limit:
+        if len(results) >= limit:
             break
-
-    return merged
+    return results
 
 
 @router.get("/me/job-ads", response_model=list[JobAdRecommendationSchema])
@@ -483,39 +393,7 @@ def recommend_job_ads_for_me(
         )
 
     candidates.sort(key=lambda item: item["base_score"], reverse=True)
-    prefiltered = candidates[:_MAX_PREFILTER]
-
-    groq_candidates = [
-        {
-            "id": item["id"],
-            "title": item["job_ad"].title,
-            "description": item["job_ad"].description[:3000],
-            "location": item["job_ad"].location,
-            "employment_type": item["job_ad"].employment_type,
-            "remote": item["job_ad"].remote,
-            "tags": [tag.name for tag in item["job_ad"].tags],
-        }
-        for item in prefiltered
-    ]
-    groq_ranked = _call_groq_reranker(
-        task="rank_job_ads_for_student",
-        subject={
-            "program": student.program,
-            "city": student.profile.city if student.profile else None,
-            "headline": student.profile.headline if student.profile else None,
-            "bio": (student.profile.bio[:3000] if student.profile and student.profile.bio else None),
-            "tags": [tag.name for tag in student.tags],
-        },
-        candidates=groq_candidates,
-        limit=limit,
-    )
-
-    return _merge_ranked_results(
-        ranked_by_groq=groq_ranked,
-        base_candidates=prefiltered,
-        item_key="job_ad",
-        limit=limit,
-    )
+    return _build_results(candidates, item_key="job_ad", limit=limit)
 
 
 @router.get("/job-ads/{job_ad_id}/students", response_model=list[StudentRecommendationSchema])
@@ -589,38 +467,4 @@ def recommend_students_for_job_ad(
         )
 
     candidates.sort(key=lambda item: item["base_score"], reverse=True)
-    prefiltered = candidates[:_MAX_PREFILTER]
-
-    groq_candidates = [
-        {
-            "id": item["id"],
-            "first_name": item["student"].first_name,
-            "last_name": item["student"].last_name,
-            "program": item["student"].program,
-            "headline": item["student"].profile.headline if item["student"].profile else None,
-            "bio": (item["student"].profile.bio[:3000] if item["student"].profile and item["student"].profile.bio else None),
-            "city": item["student"].profile.city if item["student"].profile else None,
-            "tags": [tag.name for tag in item["student"].tags],
-        }
-        for item in prefiltered
-    ]
-    groq_ranked = _call_groq_reranker(
-        task="rank_students_for_job_ad",
-        subject={
-            "title": job_ad.title,
-            "description": job_ad.description[:3000],
-            "location": job_ad.location,
-            "employment_type": job_ad.employment_type,
-            "remote": job_ad.remote,
-            "tags": [tag.name for tag in job_ad.tags],
-        },
-        candidates=groq_candidates,
-        limit=limit,
-    )
-
-    return _merge_ranked_results(
-        ranked_by_groq=groq_ranked,
-        base_candidates=prefiltered,
-        item_key="student",
-        limit=limit,
-    )
+    return _build_results(candidates, item_key="student", limit=limit)

@@ -484,7 +484,7 @@ export default function AdsPage() {
             {isLoggedIn && userRole === 'privatperson' && (
                 <section className="p-5 mb-8 border rounded-2xl border-accent/20 bg-accent/5">
                     <h2 className="mb-3 text-sm font-bold tracking-[0.08em] uppercase text-text-main">
-                        AI-matchade annonser · Powered by Groq + fallback
+                        Matchade annonser för dig
                     </h2>
 
                     {isRecommendationsLoading && (

@@ -86,3 +86,40 @@ export async function updateMySchool(payload, accessToken) {
         'Kunde inte uppdatera skolprofilen.'
     );
 }
+
+export async function unlinkSchoolStudent(studentPublicId, accessToken) {
+    const url = `${apiBaseUrl}/api/v1/schools/me/students/${encodeURIComponent(studentPublicId)}`;
+    let response;
+    try {
+        response = await fetch(url, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${accessToken}` },
+        });
+    } catch {
+        throw new Error(
+            `Kan inte nå backend-API (${apiBaseUrl || 'samma origin'}). Kontrollera att backend körs.`
+        );
+    }
+    if (!response.ok && response.status !== 204) {
+        let body = null;
+        try {
+            body = await response.json();
+        } catch {
+            body = null;
+        }
+        const detail = body?.detail;
+        throw new Error(typeof detail === 'string' ? detail : 'Kunde inte ta bort kopplingen.');
+    }
+    return true;
+}
+
+export async function fetchSchoolStudentActivity(studentPublicId, accessToken) {
+    return requestJson(
+        `${apiBaseUrl}/api/v1/schools/me/students/${encodeURIComponent(studentPublicId)}/activity`,
+        {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${accessToken}` },
+        },
+        'Kunde inte hämta studentens aktivitet.'
+    );
+}

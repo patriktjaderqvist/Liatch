@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { fetchJobAds } from '../lib/jobAdsApi';
 import { fetchRecommendedJobAds } from '../lib/recommendationsApi';
-import { fetchMyStudent } from '../lib/studentApi';
+import { fetchMyStudent, logStudentActivity } from '../lib/studentApi';
 
 const PAGE_SIZE = 12;
 const GUEST_PREVIEW_COUNT = 3;
@@ -81,9 +81,9 @@ function formatDate(dateStr) {
     });
 }
 
-function AdCard({ ad, to }) {
+function AdCard({ ad, to, onClick }) {
     return (
-        <Link to={to} className="flex flex-col gap-3 p-6 transition-colors cursor-pointer glass-card rounded-2xl hover:border-accent/30">
+        <Link to={to} onClick={onClick} className="flex flex-col gap-3 p-6 transition-colors cursor-pointer glass-card rounded-2xl hover:border-accent/30">
             <div className="flex items-start justify-between gap-4">
                 <h2 className="text-lg font-bold leading-snug text-text-main">{ad.title}</h2>
                 {ad.remote && (
@@ -130,11 +130,12 @@ function AdCard({ ad, to }) {
     );
 }
 
-function RecommendationStripCard({ recommendation, to }) {
+function RecommendationStripCard({ recommendation, to, onClick }) {
     const ad = recommendation.job_ad;
     return (
         <Link
             to={to}
+            onClick={onClick}
             className="flex flex-col gap-2 p-4 transition-colors border rounded-xl border-accent/20 bg-accent/5 hover:border-accent/40"
         >
             <div className="flex items-center justify-between gap-2">
@@ -303,6 +304,40 @@ export default function AdsPage() {
         setSearch(query);
     }, [searchParams]);
 
+    // Log student search queries to the backend so the school can see what
+    // their students are looking for. Debounce 1500ms so we don't fire on
+    // every keystroke, and only for logged-in students.
+    useEffect(() => {
+        if (!isLoggedIn || userRole !== 'privatperson') return undefined;
+        const trimmed = search.trim();
+        if (!trimmed) return undefined;
+        const accessToken = localStorage.getItem('accessToken');
+        if (!accessToken) return undefined;
+
+        const handle = setTimeout(() => {
+            logStudentActivity(
+                { activity_type: 'search', search_query: trimmed },
+                accessToken
+            ).catch(() => {
+                /* tracking is best-effort, don't surface errors */
+            });
+        }, 1500);
+
+        return () => clearTimeout(handle);
+    }, [search, isLoggedIn, userRole]);
+
+    const logAdView = (adId) => {
+        if (!isLoggedIn || userRole !== 'privatperson') return;
+        const accessToken = localStorage.getItem('accessToken');
+        if (!accessToken) return;
+        logStudentActivity(
+            { activity_type: 'view', job_ad_id: adId },
+            accessToken
+        ).catch(() => {
+            /* best-effort */
+        });
+    };
+
     const locations = useMemo(() => {
         return [...new Set(ads.map((ad) => ad.location).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'sv-SE'));
     }, [ads]);
@@ -466,6 +501,7 @@ export default function AdsPage() {
                                     key={recommendation.job_ad.id}
                                     recommendation={recommendation}
                                     to={getAdTarget(recommendation.job_ad.id)}
+                                    onClick={() => logAdView(recommendation.job_ad.id)}
                                 />
                                 ))}
                         </div>
@@ -595,7 +631,12 @@ export default function AdsPage() {
 
                     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
                         {visibleAds.map((ad) => (
-                            <AdCard key={ad.id} ad={ad} to={getAdTarget(ad.id)} />
+                            <AdCard
+                                key={ad.id}
+                                ad={ad}
+                                to={getAdTarget(ad.id)}
+                                onClick={() => logAdView(ad.id)}
+                            />
                         ))}
                     </div>
 

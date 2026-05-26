@@ -365,3 +365,20 @@ class StudentRecommendationSchema(BaseModel):
     reasons: list[str]
     source: str
     student: StudentPublicOutSchema
+
+
+class StudentActivityCreateSchema(BaseModel):
+    activity_type: str = Field(pattern=r"^(search|view)$")
+    search_query: str | None = Field(default=None, max_length=500)
+    job_ad_id: int | None = None
+
+
+class StudentActivityOutSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    activity_type: str
+    search_query: str | None
+    job_ad_id: int | None
+    job_ad: JobAdBriefSchema | None
+    created_at: datetime

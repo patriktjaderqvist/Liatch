@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { fetchMySchoolStudents, linkStudentByPublicId } from '../lib/schoolApi';
+import {
+    fetchMySchoolStudents,
+    linkStudentByPublicId,
+    unlinkSchoolStudent,
+} from '../lib/schoolApi';
 
 export default function StudenterPage() {
     const [students, setStudents] = useState([]);
@@ -8,6 +12,8 @@ export default function StudenterPage() {
     const [studentPublicId, setStudentPublicId] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitMessage, setSubmitMessage] = useState('');
+    const [unlinkingPublicId, setUnlinkingPublicId] = useState('');
+    const [confirmUnlinkId, setConfirmUnlinkId] = useState('');
 
     const loadStudents = async () => {
         const token = localStorage.getItem('accessToken');
@@ -67,6 +73,27 @@ export default function StudenterPage() {
         }
     };
 
+    const handleUnlinkStudent = async (publicId) => {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            setError('Din session har gått ut. Logga in igen.');
+            return;
+        }
+        setError('');
+        setSubmitMessage('');
+        setUnlinkingPublicId(publicId);
+        try {
+            await unlinkSchoolStudent(publicId, token);
+            setSubmitMessage('Kopplingen togs bort.');
+            setConfirmUnlinkId('');
+            await loadStudents();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setUnlinkingPublicId('');
+        }
+    };
+
     return (
         <div className="px-6 pt-32 mx-auto max-w-7xl">
             <h1 className="mb-3 text-4xl font-bold font-display text-text-main">Studenter</h1>
@@ -103,33 +130,67 @@ export default function StudenterPage() {
                 <p className="text-text-muted">Inga studenter är kopplade till skolan ännu.</p>
             ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {students.map((student) => (
-                        <div key={student.id} className="p-5 border rounded-2xl border-fg/10 bg-bg-elevated">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                                <p className="text-base font-semibold text-text-main">
-                                    {student.first_name} {student.last_name}
+                    {students.map((student) => {
+                        const isConfirming = confirmUnlinkId === student.public_id;
+                        const isUnlinking = unlinkingPublicId === student.public_id;
+                        return (
+                            <div key={student.id} className="flex flex-col p-5 border rounded-2xl border-fg/10 bg-bg-elevated">
+                                <div className="flex items-start justify-between gap-2 mb-1">
+                                    <p className="text-base font-semibold text-text-main">
+                                        {student.first_name} {student.last_name}
+                                    </p>
+                                    {student.application_count > 0 && (
+                                        <span className="shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">
+                                            {student.application_count} {student.application_count === 1 ? 'ansökan' : 'ansökningar'}
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="mt-1 text-sm text-text-muted">
+                                    {student.program || 'Program saknas'}
                                 </p>
-                                {student.application_count > 0 && (
-                                    <span className="shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">
-                                        {student.application_count} {student.application_count === 1 ? 'ansökan' : 'ansökningar'}
-                                    </span>
-                                )}
+                                <p className="mt-4 mb-1 text-xs text-text-dim">Student-ID</p>
+                                <code className="text-xs break-all text-text-main">{student.public_id}</code>
+
+                                <div className="flex items-center justify-between gap-3 pt-4 mt-auto">
+                                    <a
+                                        href={`/student/${student.public_id}`}
+                                        className="text-sm text-accent hover:underline"
+                                    >
+                                        Öppna profil
+                                    </a>
+                                    {isConfirming ? (
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleUnlinkStudent(student.public_id)}
+                                                disabled={isUnlinking}
+                                                className="text-xs font-semibold text-red-400 hover:text-red-300 disabled:opacity-50"
+                                            >
+                                                {isUnlinking ? 'Tar bort...' : 'Bekräfta'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setConfirmUnlinkId('')}
+                                                disabled={isUnlinking}
+                                                className="text-xs text-text-dim hover:text-text-main disabled:opacity-50"
+                                            >
+                                                Avbryt
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => setConfirmUnlinkId(student.public_id)}
+                                            className="text-xs text-text-dim hover:text-red-400"
+                                            title="Ta bort koppling till skolan"
+                                        >
+                                            Ta bort
+                                        </button>
+                                    )}
+                                </div>
                             </div>
-                            <p className="mt-1 text-sm text-text-muted">
-                                {student.program || 'Program saknas'}
-                            </p>
-                            <p className="mt-4 mb-1 text-xs text-text-dim">Student-ID</p>
-                            <code className="text-xs break-all text-text-main">{student.public_id}</code>
-                            <div className="mt-4">
-                                <a
-                                    href={`/student/${student.public_id}`}
-                                    className="text-sm text-accent hover:underline"
-                                >
-                                    Öppna profil
-                                </a>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

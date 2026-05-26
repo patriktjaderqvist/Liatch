@@ -313,3 +313,23 @@ class Token(TimestampMixin, Base):
     )
 
     user: Mapped["User"] = relationship(back_populates="tokens")
+
+
+class StudentActivity(TimestampMixin, Base):
+    __tablename__ = "student_activities"
+
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("students.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    activity_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    search_query: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    job_ad_id: Mapped[int | None] = mapped_column(
+        ForeignKey("job_ads.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    student: Mapped["Student"] = relationship()
+    job_ad: Mapped["JobAd | None"] = relationship()

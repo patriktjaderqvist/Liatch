@@ -97,3 +97,18 @@ export async function fetchStudentContact(publicId, accessToken) {
         'Kunde inte hämta kontaktinformation.'
     );
 }
+
+export async function logStudentActivity(payload, accessToken) {
+    return requestJson(
+        `${apiBaseUrl}/api/v1/students/me/activity`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify(payload),
+        },
+        'Kunde inte logga aktivitet.'
+    );
+}

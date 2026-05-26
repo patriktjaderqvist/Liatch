@@ -59,7 +59,7 @@ _COMMON_TERMS = {
     "for",
     "för",
 }
-_MAX_PREFILTER = 24
+_MAX_PREFILTER = 50
 _SOFT_SKILL_TERMS = {
     "team",
     "teams",
@@ -298,19 +298,23 @@ def _call_groq_reranker(
         "Returnera ENDAST giltig JSON i formatet "
         '{"ranked":[{"id":1,"score":0-100,"reasons":["kort motivering 1","kort motivering 2"]}]}. '
         "Behåll bara id:n som finns i candidates. reasons ska vara på svenska och max 3 per post. "
-        "Värdera helheten i hur likartad typen av arbete är, inte bara antalet delade nyckelord. "
-        "Två texter som handlar om samma sorts roll och domän ska få mycket högre score än två texter som råkar dela några generiska ord men handlar om olika saker. "
-        "Specialiserade nyckelord (specifika ramverk, plattformar, domäner, metoder) är starkare matchningssignaler än vanliga tech-ord som finns i nästan alla annonser. "
-        "Ignorera utfyllnadsord/funktionsord (ex: med/with/och/and/the/att/to). "
-        "Vikta mjuka kompetenser lägre men inkludera dem när de uttryckligen efterfrågas och nämns (ex: team/teamwork/samarbete/collaboration). "
-        "Ge inte hög score baserat på generiska ord utan kontext — om en kandidat bara delar generiska tech-ord med subject men handlar om en helt annan typ av roll, sätt score lågt (under 50)."
+        "Läs HELA texten för subject och för varje kandidat. Identifiera först vilken sorts arbete eller profil det handlar om — domän, roll, typ av uppgifter, intresseinriktning. "
+        "Matcha sedan på semantisk likhet i vad rollen faktiskt går ut på, inte på enskilda nyckelord. "
+        "Använd följande skala: "
+        "85-100: tydlig domän- och rollmatch (subject och kandidat handlar om samma sorts arbete i samma nisch). "
+        "60-84: relaterad domän eller överlappande färdighetsprofil men inte exakt samma roll. "
+        "30-59: lös tematisk koppling eller delade verktyg men olika typer av arbete. "
+        "0-29: olika domäner, ingen meningsfull match. "
+        "Generiska tech-ord (React, SQL, Python, JavaScript, Git, API, REST) är svaga signaler — om en kandidat bara delar sådana ord men handlar om en helt annan roll än subject, sätt score under 50 även om det finns flera delade ord. "
+        "Specialiserade ord och nischade ramverk/plattformar är starka signaler när de förekommer i båda texter. "
+        "Vikta mjuka kompetenser lågt men inkludera dem när de uttryckligen efterfrågas och nämns."
     )
     user_prompt = json.dumps(payload, ensure_ascii=False)
     endpoint = "https://api.groq.com/openai/v1/chat/completions"
     request_body = {
         "model": settings.GROQ_MODEL,
         "temperature": 0.1,
-        "max_tokens": 700,
+        "max_tokens": 2500,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -468,13 +472,11 @@ def recommend_job_ads_for_me(
         {
             "id": item["id"],
             "title": item["job_ad"].title,
-            "description": item["job_ad"].description[:1200],
+            "description": item["job_ad"].description[:3000],
             "location": item["job_ad"].location,
             "employment_type": item["job_ad"].employment_type,
             "remote": item["job_ad"].remote,
             "tags": [tag.name for tag in item["job_ad"].tags],
-            "base_score": item["base_score"],
-            "base_reasons": item["base_reasons"],
         }
         for item in prefiltered
     ]
@@ -484,7 +486,7 @@ def recommend_job_ads_for_me(
             "program": student.program,
             "city": student.profile.city if student.profile else None,
             "headline": student.profile.headline if student.profile else None,
-            "bio": (student.profile.bio[:1200] if student.profile and student.profile.bio else None),
+            "bio": (student.profile.bio[:3000] if student.profile and student.profile.bio else None),
             "tags": [tag.name for tag in student.tags],
         },
         candidates=groq_candidates,
@@ -579,11 +581,9 @@ def recommend_students_for_job_ad(
             "last_name": item["student"].last_name,
             "program": item["student"].program,
             "headline": item["student"].profile.headline if item["student"].profile else None,
-            "bio": (item["student"].profile.bio[:1200] if item["student"].profile and item["student"].profile.bio else None),
+            "bio": (item["student"].profile.bio[:3000] if item["student"].profile and item["student"].profile.bio else None),
             "city": item["student"].profile.city if item["student"].profile else None,
             "tags": [tag.name for tag in item["student"].tags],
-            "base_score": item["base_score"],
-            "base_reasons": item["base_reasons"],
         }
         for item in prefiltered
     ]
@@ -591,7 +591,7 @@ def recommend_students_for_job_ad(
         task="rank_students_for_job_ad",
         subject={
             "title": job_ad.title,
-            "description": job_ad.description[:600],
+            "description": job_ad.description[:3000],
             "location": job_ad.location,
             "employment_type": job_ad.employment_type,
             "remote": job_ad.remote,

@@ -1,14 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import desc, select
+from sqlalchemy.orm import Session, selectinload
 
-from app.api.v1.core.models import School, Student, User
+from app.api.v1.core.models import JobAd, School, Student, StudentActivity, User
 from app.api.v1.core.schemas import (
     LinkStudentByPublicIdSchema,
     SchoolOutSchema,
     SchoolPublicOutSchema,
     SchoolStudentOutSchema,
     SchoolUpdateSchema,
+    StudentActivityOutSchema,
 )
 from app.db_setup import get_db
 from app.security import get_current_user
@@ -134,3 +135,66 @@ def update_my_school(
     db.commit()
     db.refresh(school)
     return school
+
+
+def _student_linked_to_school(db: Session, public_id: str, school_id: int) -> Student:
+    """Fetch a student by public_id and assert they belong to this school."""
+    student = db.scalars(
+        select(Student).where(Student.public_id == public_id)
+    ).first()
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Studenten hittades inte.",
+        )
+    if student.school_id != school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Studenten är inte kopplad till er skola.",
+        )
+    return student
+
+
+@router.delete(
+    "/me/students/{public_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def unlink_school_student(
+    public_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    school_id = _require_school(current_user)
+    student = _student_linked_to_school(db, public_id, school_id)
+
+    student.school_id = None
+    linked_user = db.scalars(
+        select(User).where(User.student_id == student.id)
+    ).first()
+    if linked_user and linked_user.school_id == school_id:
+        linked_user.school_id = None
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/me/students/{public_id}/activity",
+    response_model=list[StudentActivityOutSchema],
+)
+def list_school_student_activity(
+    public_id: str,
+    limit: int = Query(default=50, ge=1, le=200),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    school_id = _require_school(current_user)
+    student = _student_linked_to_school(db, public_id, school_id)
+
+    activities = db.scalars(
+        select(StudentActivity)
+        .where(StudentActivity.student_id == student.id)
+        .options(selectinload(StudentActivity.job_ad).selectinload(JobAd.company))
+        .order_by(desc(StudentActivity.created_at))
+        .limit(limit)
+    ).all()
+    return activities

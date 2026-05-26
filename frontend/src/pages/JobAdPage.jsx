@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { fetchJobAd } from '../lib/jobAdsApi';
 import { createApplication, fetchMyApplications } from '../lib/applicationsApi';
+import { logStudentActivity } from '../lib/studentApi';
 
 function formatDate(dateStr) {
     if (!dateStr) return null;
@@ -61,6 +62,19 @@ export default function JobAdPage() {
             })
             .catch((err) => setError(err.message))
             .finally(() => setIsLoading(false));
+
+        // Log the ad view for the linked school's activity feed.
+        if (userRole === 'privatperson' && accessToken) {
+            const adId = Number(id);
+            if (Number.isFinite(adId)) {
+                logStudentActivity(
+                    { activity_type: 'view', job_ad_id: adId },
+                    accessToken
+                ).catch(() => {
+                    /* best-effort */
+                });
+            }
+        }
     }, [id]);
 
     const handleApply = async () => {

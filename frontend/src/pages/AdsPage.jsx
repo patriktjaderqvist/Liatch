@@ -344,7 +344,7 @@ export default function AdsPage() {
                 (recommendation) =>
                     recommendation?.job_ad?.id &&
                     typeof recommendation.score === 'number' &&
-                    recommendation.score >= 40
+                    recommendation.score > 0
             ),
         [recommendedAds]
     );

@@ -56,7 +56,8 @@ _COMMON_TERMS = {
     "for",
     "för",
 }
-_MIN_RELEVANCE_SCORE = 40
+_MIN_RELEVANCE_SCORE = 25
+_FALLBACK_MIN_RESULTS = 3
 _SOFT_SKILL_TERMS = {
     "team",
     "teams",
@@ -206,9 +207,10 @@ def _score_match(
     similarity = _cosine_similarity(subject_vec, candidate_vec)
 
     # sqrt() pulls real-world cosine values (typically 0.05-0.40 for relevant
-    # matches) into a useful 0.22-0.63 band, then * 95 turns it into a 20-60
-    # base. Strong matches with shared specialised vocabulary will push higher.
-    base = int(round(math.sqrt(similarity) * 95))
+    # matches) into a useful 0.22-0.63 band, then * 110 turns it into a 25-70
+    # base. Strong matches with shared specialised vocabulary push to 90+ once
+    # the boosts kick in.
+    base = int(round(math.sqrt(similarity) * 110))
 
     # Surface the most distinctive shared terms — the ones that actually
     # drove the similarity score — so the reason text is informative.
@@ -314,22 +316,31 @@ def _build_results(
     item_key: str,
     limit: int,
 ) -> list[dict[str, Any]]:
-    """Drop sub-threshold candidates, take top-N, shape for the response."""
-    results: list[dict[str, Any]] = []
+    """Take top-N by score. Filter sub-threshold matches, but if filtering
+    leaves us with fewer than _FALLBACK_MIN_RESULTS we fall back to the top
+    candidates regardless of score — better to show weak matches than an
+    empty list when there are active ads."""
+    above: list[dict[str, Any]] = []
+    below: list[dict[str, Any]] = []
     for candidate in candidates:
-        if candidate["base_score"] < _MIN_RELEVANCE_SCORE:
-            continue
-        results.append(
-            {
-                item_key: candidate[item_key],
-                "score": candidate["base_score"],
-                "reasons": candidate["base_reasons"],
-                "source": "tfidf",
-            }
-        )
-        if len(results) >= limit:
+        shaped = {
+            item_key: candidate[item_key],
+            "score": candidate["base_score"],
+            "reasons": candidate["base_reasons"],
+            "source": "tfidf",
+        }
+        if candidate["base_score"] >= _MIN_RELEVANCE_SCORE:
+            above.append(shaped)
+        else:
+            below.append(shaped)
+        if len(above) >= limit:
             break
-    return results
+
+    if len(above) >= _FALLBACK_MIN_RESULTS or not below:
+        return above[:limit]
+
+    needed = max(_FALLBACK_MIN_RESULTS, len(above)) - len(above)
+    return (above + below[:needed])[:limit]
 
 
 @router.get("/me/job-ads", response_model=list[JobAdRecommendationSchema])

@@ -338,6 +338,17 @@ export default function AdsPage() {
         });
     };
 
+    const visibleRecommendations = useMemo(
+        () =>
+            recommendedAds.filter(
+                (recommendation) =>
+                    recommendation?.job_ad?.id &&
+                    typeof recommendation.score === 'number' &&
+                    recommendation.score >= 40
+            ),
+        [recommendedAds]
+    );
+
     const locations = useMemo(() => {
         return [...new Set(ads.map((ad) => ad.location).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'sv-SE'));
     }, [ads]);
@@ -486,24 +497,22 @@ export default function AdsPage() {
                         </p>
                     )}
 
-                    {!isRecommendationsLoading && !recommendationsError && recommendedAds.length === 0 && (
+                    {!isRecommendationsLoading && !recommendationsError && visibleRecommendations.length === 0 && (
                         <p className="text-sm text-text-dim">
                             Inga rekommendationer ännu. Fyll gärna i mer i din profil för bättre träffar.
                         </p>
                     )}
 
-                    {!isRecommendationsLoading && recommendedAds.length > 0 && (
+                    {!isRecommendationsLoading && visibleRecommendations.length > 0 && (
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                            {recommendedAds
-                                .filter((recommendation) => recommendation?.job_ad?.id)
-                                .map((recommendation) => (
+                            {visibleRecommendations.map((recommendation) => (
                                 <RecommendationStripCard
                                     key={recommendation.job_ad.id}
                                     recommendation={recommendation}
                                     to={getAdTarget(recommendation.job_ad.id)}
                                     onClick={() => logAdView(recommendation.job_ad.id)}
                                 />
-                                ))}
+                            ))}
                         </div>
                     )}
                 </section>

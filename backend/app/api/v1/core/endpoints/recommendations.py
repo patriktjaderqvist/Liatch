@@ -60,6 +60,7 @@ _COMMON_TERMS = {
     "för",
 }
 _MAX_PREFILTER = 50
+_MIN_RELEVANCE_SCORE = 40
 _SOFT_SKILL_TERMS = {
     "team",
     "teams",
@@ -297,17 +298,23 @@ def _call_groq_reranker(
         "Du är en matchningsmotor för en LIA-plattform. "
         "Returnera ENDAST giltig JSON i formatet "
         '{"ranked":[{"id":1,"score":0-100,"reasons":["kort motivering 1","kort motivering 2"]}]}. '
-        "Behåll bara id:n som finns i candidates. reasons ska vara på svenska och max 3 per post. "
-        "Läs HELA texten för subject och för varje kandidat. Identifiera först vilken sorts arbete eller profil det handlar om — domän, roll, typ av uppgifter, intresseinriktning. "
-        "Matcha sedan på semantisk likhet i vad rollen faktiskt går ut på, inte på enskilda nyckelord. "
-        "Använd följande skala: "
-        "85-100: tydlig domän- och rollmatch (subject och kandidat handlar om samma sorts arbete i samma nisch). "
-        "60-84: relaterad domän eller överlappande färdighetsprofil men inte exakt samma roll. "
-        "30-59: lös tematisk koppling eller delade verktyg men olika typer av arbete. "
-        "0-29: olika domäner, ingen meningsfull match. "
-        "Generiska tech-ord (React, SQL, Python, JavaScript, Git, API, REST) är svaga signaler — om en kandidat bara delar sådana ord men handlar om en helt annan roll än subject, sätt score under 50 även om det finns flera delade ord. "
-        "Specialiserade ord och nischade ramverk/plattformar är starka signaler när de förekommer i båda texter. "
-        "Vikta mjuka kompetenser lågt men inkludera dem när de uttryckligen efterfrågas och nämns."
+        "Behåll bara id:n som finns i candidates. reasons ska vara på svenska och max 3 per post.\n\n"
+        "ARBETSGÅNG (gör detta internt innan du skriver JSON):\n"
+        "1. Läs subject hela vägen och formulera i ett par ord: vilken specifik domän/nisch och vilken rolltyp handlar det om? "
+        "(t.ex. 'frontend-utveckling', 'autonom AI-handel', 'data engineering', 'UX-design'). "
+        "Var så specifik som texten tillåter — om subject uttryckligen nämner en nisch (t.ex. en specifik bransch, ramverk eller tillämpning) är det nischen som ska driva matchningen.\n"
+        "2. För varje kandidat: formulera på samma sätt vilken nisch/rolltyp den handlar om.\n"
+        "3. Jämför nisch + roll, inte enskilda nyckelord. Två texter som handlar om samma nisch ska få hög score även om ordvalen skiljer sig. Två texter i olika nischer ska få låg score även om de delar generiska ord.\n\n"
+        "SKALA:\n"
+        "85-100: samma specifika nisch OCH samma rolltyp.\n"
+        "65-84: samma bredare domän men en annan nisch eller rolltyp.\n"
+        "40-64: angränsande domäner, vissa delade verktyg, men inte samma typ av arbete.\n"
+        "0-39: olika domäner. Bara ytlig keyword-överlapp räknas inte som match.\n\n"
+        "VIKTIGT:\n"
+        "- Om subject uttryckligen nämner en specialiserad nisch (t.ex. en specifik tillämpning, bransch, ramverk eller teknisk inriktning) ska en kandidat i exakt den nischen alltid ranka högre än kandidater i bredare domäner.\n"
+        "- Generiska tech-ord (React, SQL, Python, JavaScript, Git, API, REST) är svaga signaler. En kandidat som bara delar sådana ord med subject men handlar om annan roll ska få under 40.\n"
+        "- Specialiserade ord och nischade plattformar/ramverk är starka signaler när de förekommer i båda texter.\n"
+        "- Vikta mjuka kompetenser lågt; ta endast med dem när de uttryckligen efterfrågas."
     )
     user_prompt = json.dumps(payload, ensure_ascii=False)
     endpoint = "https://api.groq.com/openai/v1/chat/completions"
@@ -373,10 +380,18 @@ def _merge_ranked_results(
             base = candidate_by_id[candidate_id]
             raw_reasons = ranked.get("reasons")
             ranked_reasons = raw_reasons if isinstance(raw_reasons, list) else []
+            score = _clamp_score(
+                _safe_int(ranked.get("score"), default=base["base_score"])
+            )
+            # Drop poor matches — if the model rated this below the relevance
+            # threshold it does not belong in a "recommendations" list.
+            if score < _MIN_RELEVANCE_SCORE:
+                seen_ids.add(candidate_id)
+                continue
             merged.append(
                 {
                     item_key: base[item_key],
-                    "score": _clamp_score(_safe_int(ranked.get("score"), default=base["base_score"])),
+                    "score": score,
                     "reasons": _short_reason_list(
                         ranked_reasons,
                         base["base_reasons"][0],
@@ -390,6 +405,8 @@ def _merge_ranked_results(
 
     for candidate in base_candidates:
         if candidate["id"] in seen_ids:
+            continue
+        if candidate["base_score"] < _MIN_RELEVANCE_SCORE:
             continue
         merged.append(
             {
